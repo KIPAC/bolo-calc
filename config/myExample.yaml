@@ -1,0 +1,62 @@
+instrument:
+  camera:
+    boresite_elevation : 0
+    optical_coupling: 1
+    f_number : 2.5
+    bath_temperature: .1
+  detector:
+    fractional_bandwidth: .35
+    band: 150.E+9
+    pixel_size: 6.8E-3
+    num_det_per_water: 542
+    num_wafer_per_optics_tube: 1
+    num_optics_tube: 3
+    waist_factor: 3
+    det_eff: 1
+    psat: None
+    carrier_index: 3
+    Tc: .165
+    Tc_fraction: None
+    G: None
+    Flink: None
+    Yield: .7
+    response_factor: 1.41
+    bolo_resistance: 1
+  readout:
+    squid_nei: None
+    read_noise_frac: .1
+    dwell_time: None
+    revisit_rate: None
+    nyquist_inductance: None
+  optics:
+    default:
+      #param_file: None
+      temperature: 273.
+      absorption: [.002, .005]
+      reflection: [0, 0]
+      thickness: None
+      index: None
+      loss_tangent: None
+      conductivity: None
+      surface_rough: None
+      spillover: None
+      spillover_temp: None
+      scatter_frac: None
+      scatter_temp: None
+    elements:
+      primary:
+        temperature: 290.  
+      window:
+        reflection: [0.1, 0.2]
+      IRshader1:
+      IRshader2:
+      IRshader3:
+universe:
+  dust:
+    spectral_index: 1.5
+    amplitude: 1.2E-2
+    scale_frequency: 353.0E+9
+  synchrotron:
+    spectral_index: -3.0
+    amplitude: 2.0E-4
+    scale_frequency: 30.E+9
