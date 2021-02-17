@@ -16,7 +16,7 @@ from bolo.calc import physics
 
 class Instrument(Model):
     """
-    Foreground object contains the foreground parameters for the sky
+    Collection of instrument sub-system models
     """
     camera = Property(dtype=Camera, required=True)
     detector = Property(dtype=Detector, required=True)

@@ -3,7 +3,7 @@ from collections import OrderedDict as odict
 
 import numpy as np
 
-from bolo.model.dummy import Property, Model
+from cfgmdl import Property, Model
 from bolo.model.foregrounds import Universe
 from bolo.model.instrument import Instrument
 
@@ -12,7 +12,7 @@ from bolo.calc import physics
 
 class Top(Model):
     """
-    Foreground object contains the foreground parameters for the sky
+    Top level model
     """
     instrument = Property(dtype=Instrument)
     universe = Property(dtype=Universe)

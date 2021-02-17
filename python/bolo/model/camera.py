@@ -10,7 +10,7 @@ from bolo.calc import physics
 
 class Camera(Model):
     """
-    Foreground object contains the foreground parameters for the sky
+    Camera model
     """
     boresite_elevation = Property(dtype=float, default=0., format="%.2e")
     optical_coupling = Property(dtype=float, default=1., format="%.2e")

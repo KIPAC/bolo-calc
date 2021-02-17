@@ -2,27 +2,32 @@
 from collections import OrderedDict as odict
 
 import numpy as np
+from jax import grad, jacfwd, jacrev
+import jax.numpy as jnp
 
-#from bolo.ctrl.param import Property, Derived, Parameter, Model
-from bolo.model.dummy import Property, Model
+from cfgmdl import Property, Model, Parameter, Function
 
 from bolo.ctrl.utils import is_not_none
 from bolo.calc import physics
 
 class Foreground(Model):
     """
-    Foreground object contains the foreground parameters for the sky
+    Foreground model base class
     """    
     spectral_index = Property(dtype=float, required=True, format="%.2e", help="Powerlaw index")
-    amplitude = Property(dtype=float, required=True, format="%.2e", help="Foreground amplitude")
-    scale_frequency = Property(dtype=float, required=True, format="%.2e", help="Frequency")
+    amplitude = Parameter(required=True, help="Foreground amplitude", bounds=[0., 3.])
+    scale_frequency = Parameter(required=True, help="Frequency")
 
         
 class Dust(Foreground):
+    """
+    Dust emission model
+    """
 
     scale_temperature = Property(dtype=float, format="%.2e", help="Frequency")
-
-    def temp(self, freq, emiss=1.0): 
+    
+    @Function
+    def temp(freq, emiss, amplitude, scale_frequency, spectral_index, scale_temperature): 
         """
         Return the galactic effective physical temperature
 
@@ -31,54 +36,44 @@ class Dust(Foreground):
         emiss (float): emissivity of the galactic dust. Default to 1.
         """
         # Passed amplitude [W/(m^2 sr Hz)] converted from [MJy]
-        freq = np.array(freq)
-        emiss = np.array(emiss)
-        amp = emiss * self.amplitude
+        amplitude = emiss * amplitude
         # Frequency scaling
         # (freq / scale_freq)**dust_ind
-        if is_not_none(self.scale_frequency) and is_not_none(self.spectral_index):
-            freq_scale = (freq / self.scale_frequency)**(self.spectral_index)
+        if np.isfinite(scale_frequency) and np.isfinite(spectral_index):
+            freq_scale = (freq / scale_frequency)**(spectral_index)
         else:
             freq_scale = 1.
         # Effective blackbody scaling
         # BB(freq, dust_temp) / BB(dust_freq, dust_temp)
-        if is_not_none(self.scale_temperature) and is_not_none(self.scale_fequency):
-            spec_scale = physics.bb_spec_rad(freq, self.scale_temperature) / physics.bb_spec_rad(self.scale_frequency.val, self.scale_temperature.val)
+        if np.isfinite(scale_temperature) and np.isfinite(scale_frequency):
+            spec_scale = physics.bb_spec_rad(freq, scale_temperature) / physics.bb_spec_rad(scale_frequency, scale_temperature)
         else:
             spec_scale = 1.
         # Convert [W/(m^2 sr Hz)] to brightness temperature [K_RJ]
-        pow_spec_rad = amp * freq_scale * spec_scale
-        # Convert brightness temperature [K_RJ] to physical temperature [K]
-        phys_temp = physics.Tb_from_spec_rad(freq, pow_spec_rad)
-        return phys_temp
+        pow_spec_rad = amplitude * freq_scale * spec_scale
+        return physics.Tb_from_spec_rad(freq, pow_spec_rad)
 
-
-
+        
+    
 class Synchrotron(Foreground):
+    """
+    Synchrotron emission model
+    """
 
-    def temp(self, freq, emiss=1.0):
-        """
-        Return the synchrotron spectral radiance [W/(m^2-Hz)]
-
-        Args:
-        freq (float): frequency at which to evaluate the spectral radiance
-        emiss (float): emissivity of the synchrotron radiation. Default to 1.
-        """
-        # Passed brightness temp [K_RJ]
-        freq = np.array(freq)
-        emiss = np.array(emiss)
-        bright_temp = emiss * self.amplitude
+    @Function
+    def temp(freq, emiss, amplitude, scale_frequency, spectral_index):
+        bright_temp = emiss * amplitude
         # Frequency scaling (freq / sync_freq)**sync_ind
-        freq_scale = (freq / self.scale_frequency)**self.spectral_index
+        freq_scale = (freq / scale_frequency)**spectral_index
         scaled_bright_temp = bright_temp * freq_scale
         # Convert brightness temperature [K_RJ] to physical temperature [K]
-        phys_temp = physics.Tb_from_Trj(freq, scaled_bright_temp)
-        return phys_temp
-
-
+        return physics.Tb_from_Trj(freq, scaled_bright_temp)
+    
 
 class Universe(Model):
-
+    """
+    Collection of emission models
+    """
     dust = Property(dtype=Dust, help='Dust model')
     synchrotron = Property(dtype=Synchrotron, help='Synchrotron model')
     

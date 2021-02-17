@@ -3,14 +3,14 @@ from collections import OrderedDict as odict
 
 import numpy as np
 
-from bolo.model.dummy import Property, Model
+from cfgmdl import Property, Model
 
 from bolo.ctrl.utils import is_not_none
 from bolo.calc import physics
 
 class Detector(Model):
     """
-    Foreground object contains the foreground parameters for the sky
+    Detector Model
     """
     fractional_bandwidth = Property(dtype=float, default=.35)
     band = Property(dtype=float, default=150.E+9)

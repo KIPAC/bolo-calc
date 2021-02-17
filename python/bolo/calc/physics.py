@@ -14,6 +14,7 @@ co (dict): CO Emission lines [Hz]
 """
 
 import numpy as np
+import jax.numpy as jnp
 
 h = 6.6261e-34
 kB = 1.3806e-23
@@ -26,10 +27,11 @@ Tcmb = 2.725
 
 
 # ***** Helper Methods *****
-def _check_inputs(x, inputs=None):
+def check_inputs(x, inputs=None):
     ret = []
     if isinstance(x, np.ndarray) or isinstance(x, list):
         x = np.array(x).astype(np.float)
+        ones = np.ones(x.shape)
         if inputs is None:
             return x
         ret.append(x)
@@ -37,10 +39,9 @@ def _check_inputs(x, inputs=None):
             if callable(inp):
                 ret.append(inp(x).astype(np.float))
             elif isinstance(inp, np.ndarray) or isinstance(inp, list):
-                ret.append(np.array(inp).astype(np.float))
+                ret.append(np.array(inp).astype(np.float)*ones)
             elif isinstance(inp, int) or isinstance(inp, float):
-                ret.append(np.array(
-                    [inp for i in x]).astype(np.float))
+                ret.append(np.array([inp for i in x]).astype(np.float)*ones)
             else:
                 raise Exception(
                     "Non-numeric value %s passed in Physics" % (str(x)))
@@ -71,16 +72,16 @@ def lamb(freq, ind=1.0):
     freq (float): frequencies [Hz]
     ind: index of refraction. Defaults to 1
     """
-    freq, ind = _check_inputs(freq, [ind])
+    #freq, ind = _check_inputs(freq, [ind])
     return c/(freq*ind)
 
 def band_edges(freqs, tran):
     """ Find the -3 dB points of an arbirary band """
-    max_tran = np.amax(tran)
-    max_tran_loc = np.argmax(tran)
-    lo_point = np.argmin(
+    max_tran = jnp.amax(tran)
+    max_tran_loc = jnp.argmax(tran)
+    lo_point = jnp.argmin(
         abs(tran[:max_tran_loc] - 0.5 * max_tran))
-    hi_point = np.argmin(
+    hi_point = jnp.argmin(
         abs(tran[max_tran_loc:] - 0.5 * max_tran)) + max_tran_loc
     flo = freqs[lo_point]
     fhi = freqs[hi_point]
@@ -97,9 +98,9 @@ def spill_eff(freq, pixd, fnum, wf=3.0):
     fnum (float): f-number
     wf (float): waist factor. Defaults to 3.
     """
-    freq, pixd, fnum, wf = _check_inputs(freq, [pixd, fnum, wf])
-    return 1. - np.exp(
-        (-np.power(np.pi, 2)/2.) * np.power(
+    #freq, pixd, fnum, wf = _check_inputs(freq, [pixd, fnum, wf])
+    return 1. - jnp.exp(
+        (-jnp.power(np.pi, 2)/2.) * jnp.power(
             (pixd / (wf * fnum * (c/freq))), 2))
 
 def edge_taper(ap_eff):
@@ -109,7 +110,7 @@ def edge_taper(ap_eff):
     Args:
     ap_eff (float): aperture efficiency
     """
-    return 10. * np.log10(1. - ap_eff)
+    return 10. * jnp.log10(1. - ap_eff)
 
 def apert_illum(freq, pixd, fnum, wf=3.0):
     """
@@ -122,17 +123,17 @@ def apert_illum(freq, pixd, fnum, wf=3.0):
     fnum (float): f-number
     wf (float): beam waist factor
     """
-    freq, pixd, fnum, wf = _check_inputs(freq, [pixd, fnum, wf])
+    #freq, pixd, fnum, wf = _check_inputs(freq, [pixd, fnum, wf])
     lamb = lamb(freq)
     w0 = pixd / wf
     theta_stop = lamb / (np.pi * w0)
-    theta_apert = np.arange(0., np.arctan(1. / (2. * fnum)), 0.01)
-    V = np.exp(-np.power(theta_apert, 2.) / np.power(theta_stop, 2.))
-    eff_num = np.power(
-        np.trapz(V * np.tan(theta_apert / 2.), theta_apert), 2.)
-    eff_denom = np.trapz(
-        np.power(V, 2.) * np.sin(theta_apert), theta_apert)
-    eff_fact = 2. * np.power(np.tan(theta_apert/2.), -2.)
+    theta_apert = jnp.arange(0., jnp.arctan(1. / (2. * fnum)), 0.01)
+    V = jnp.exp(-jnp.power(theta_apert, 2.) / jnp.power(theta_stop, 2.))
+    eff_num = jnp.power(
+        jnp.trapz(V * jnp.tan(theta_apert / 2.), theta_apert), 2.)
+    eff_denom = jnp.trapz(
+        jnp.power(V, 2.) * jnp.sin(theta_apert), theta_apert)
+    eff_fact = 2. * jnp.power(jnp.tan(theta_apert/2.), -2.)
     return (eff_num / eff_denom) * eff_fact
 
 def ruze_eff(freq, sigma):
@@ -143,8 +144,8 @@ def ruze_eff(freq, sigma):
     freq (float): frequencies [Hz]
     sigma (float): RMS surface roughness
     """
-    freq, sigma = _check_inputs(freq, [sigma])
-    return np.exp(-np.power(4 * np.pi * sigma / (c / freq), 2.))
+    #freq, sigma = _check_inputs(freq, [sigma])
+    return jnp.exp(-jnp.power(4 * np.pi * sigma / (c / freq), 2.))
 
 def ohmic_eff(freq, sigma):
     """
@@ -154,8 +155,8 @@ def ohmic_eff(freq, sigma):
     freq (float): frequencies [Hz]
     sigma (float): conductivity [S/m]
     """
-    freq, sigma = _check_inputs(freq, [sigma])
-    return 1. - 4. * np.sqrt(np.pi * freq * mu0 / sigma) / Z0
+    #freq, sigma = _check_inputs(freq, [sigma])
+    return 1. - 4. * jnp.sqrt(np.pi * freq * mu0 / sigma) / Z0
 
 #def brightness_temp(freq, spec_rad):
 #    """
@@ -178,20 +179,20 @@ def Trj_over_Tb(freq, Tb):
     freq (float): frequencies [Hz]
     Tb (float): physical temperature. Default to Tcmb
     """
-    freq, Tb = _check_inputs(freq, [Tb])
+    #freq, Tb = _check_inputs(freq, [Tb])
     x = (h * freq)/(Tb * kB)
-    thermo_fact = np.power(
-        (np.exp(x) - 1.), 2.) / (np.power(x, 2.) * np.exp(x))
+    thermo_fact = jnp.power(
+        (jnp.exp(x) - 1.), 2.) / (jnp.power(x, 2.) * jnp.exp(x))
     return 1. / thermo_fact
 
 def Tb_from_spec_rad(freq, pow_spec):
     return (
         (h * freq / kB) / 
-        np.log((2 * h * (freq**3 / c**2) / pow_spec) + 1))
+        jnp.log((2 * h * (freq**3 / c**2) / pow_spec) + 1))
 
 def Tb_from_Trj(freq, Trj):
     alpha = (h * freq) / kB
-    return alpha / np.log((2 * alpha / Trj) + 1)
+    return alpha / jnp.log((2 * alpha / Trj) + 1)
 
 def inv_var(err):
     """
@@ -200,8 +201,8 @@ def inv_var(err):
     Args:
     err (float): errors to generate weights
     """
-    np.seterr(divide='ignore')
-    return 1. / (np.sqrt(np.sum(1. / (np.power(np.array(err), 2.)))))
+    jnp.seterr(divide='ignore')
+    return 1. / (jnp.sqrt(jnp.sum(1. / (jnp.power(np.array(err), 2.)))))
 
 def dielectric_loss(freq, thick, ind, ltan):
     """
@@ -216,7 +217,7 @@ def dielectric_loss(freq, thick, ind, ltan):
     """
     freq, thick, ind, ltan = _check_inputs(
         freq, [thick, ind, ltan])
-    return 1. - np.exp(
+    return 1. - jnp.exp(
         (-2. * PI * ind * ltan * thick) / (lamb(freq)))
 
 def rj_temp(powr, bw, eff=1.0):
@@ -238,11 +239,11 @@ def n_occ(freq, temp):
     freq (float): frequency [Hz]
     temp (float): blackbody temperature [K]
     """
-    freq, temp = _check_inputs(freq, [temp])
+    #freq, temp = _check_inputs(freq, [temp])
     fact = (h * freq)/(kB * temp)
-    fact = np.where(fact > 100, 100, fact)
-    with np.errstate(divide='raise'):
-        return 1. / (np.exp(fact) - 1.)
+    fact = jnp.where(fact > 100, 100, fact)
+    with jnp.errstate(divide='raise'):
+        return 1. / (jnp.exp(fact) - 1.)
 
 def a_omega(freq):
     """
@@ -252,7 +253,7 @@ def a_omega(freq):
     Args:
     freq (float): frequencies [Hz]
     """
-    freq = _check_inputs(freq)
+    #freq = _check_inputs(freq)
     return lamb(freq)**2
 
 def bb_spec_rad(freq, temp, emis=1.0):
@@ -265,7 +266,7 @@ def bb_spec_rad(freq, temp, emis=1.0):
     temp (float): blackbody temperature [K]
     emiss (float): blackbody emissivity. Defaults to 1.
     """
-    freq, temp, emis = _check_inputs(freq, [temp, emis])
+    #freq, temp, emis = _check_inputs(freq, [temp, emis])
     return (emis * (2 * h * (freq**3) /
             (c**2)) * n_occ(freq, temp))
 
@@ -280,7 +281,7 @@ def bb_pow_spec(freq, temp, emis=1.0):
     temp (float): blackbody temperature [K]
     emiss (float): blackbody emissivity. Defaults to 1.
     """
-    freq, temp, emis = _check_inputs(freq, [temp, emis])
+    #freq, temp, emis = _check_inputs(freq, [temp, emis])
     return 0.5 * a_omega(freq) * bb_spec_rad(freq, temp, emis)
 
 def ani_pow_spec(freq, temp, emiss=1.0):
@@ -295,8 +296,8 @@ def ani_pow_spec(freq, temp, emiss=1.0):
     temp (float): blackbody temperature [K]
     emiss (float): blackbody emissivity, Defaults to 1.
     """
-    freq, temp, emiss = _check_inputs(freq, [temp, emiss])
+    #freq, temp, emiss = _check_inputs(freq, [temp, emiss])
     return (((h**2) / kB) * emiss *
             (n_occ(freq, temp)**2) * ((freq**2)/(temp**2)) *
-            np.exp((h * freq)/(kB * temp)))
+            jnp.exp((h * freq)/(kB * temp)))
 
