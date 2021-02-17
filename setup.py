@@ -10,7 +10,7 @@ setup(
     url = "https://github.com/KIPAC/bolo-calc",
     package_dir={"":"python"},
     packages=["bolo"],
-    description="=Bolometric Calculations for CMB S4",
+    description="Bolometric Calculations for CMB S4",
     long_description=open("README.md").read(),
     package_data={"": ["README.md", "LICENSE"]},
     include_package_data=True,
@@ -22,5 +22,5 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         ],
-    install_requires=['numpy', 'pyyaml', 'pymodeler'],
+    install_requires=['numpy', 'jax', 'jaxlib', 'pyyaml', 'cfgmdl'],
 )

@@ -1,3 +1,5 @@
 numpy
+jax
+jaxlib
 pyyaml
-pymodeler
+cfgmdl
