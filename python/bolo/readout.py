@@ -1,12 +1,6 @@
+""" Instrument readout model """
 
-from collections import OrderedDict as odict
-
-import numpy as np
-
-from cfgmdl import Choice, Property, Model, Parameter
-
-from bolo.ctrl.utils import is_not_none
-from bolo.calc import physics
+from cfgmdl import Property, Model, Parameter
 
 class Readout(Model):
     """
@@ -17,4 +11,3 @@ class Readout(Model):
     dwell_time = Property(dtype=float)
     revisit_rate = Property(dtype=float)
     nyquist_inductance = Property(dtype=float)
-    rtype = Choice(choices=["a", "b", "c"], default="a")

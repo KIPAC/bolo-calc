@@ -1,13 +1,10 @@
 """This module contains functions to help manage configuration for the
 offline analysis of LSST Electrical-Optical testing"""
 
-import sys
 import os
-import copy
 import numpy as np
 
-from collections import OrderedDict
-
+CONFIG_DIR = None
 
 def is_none(val):
     """Check to see if a value is none"""
@@ -18,6 +15,32 @@ def is_not_none(val):
     return val not in [None, 'none', 'None', np.nan]
 
 
+class CfgDir:
+    """ Tiny class to find configuration files"""
+
+    def __init__(self):
+        """ Constructor """
+        self.config_dir = None
+
+    def set_dir(self, val):
+        """ Set the top-level configuration directory"""
+        self.config_dir = val
+
+    def get_dir(self):
+        """ Get the top-level configuration directory"""
+        return self.config_dir
+
+    def cfg_path(self, val):
+        """ Build a path using the top-level configuration directory """
+        return os.path.join(self.config_dir, val)
+
+CFG_DIR = CfgDir()
+
+set_config_dir = CFG_DIR.set_dir
+get_config_dir = CFG_DIR.get_dir
+cfg_path = CFG_DIR.cfg_path
+
+    
 def copy_dict(in_dict, def_dict):
     """Copy a set of key-value pairs to an new dict
 
@@ -128,3 +151,26 @@ def expand_dict_from_defaults_and_elements(default_dict, elem_dict):
             continue
         o_dict[key].update(elem)
     return o_dict
+
+
+
+def read_txt_to_np(fname):
+    """ Read a txt file to a numpy array """
+    ext = os.path.splitext(fname)[-1]
+    if ext.lower() == '.txt':
+        delim = None
+    elif ext.lower() == '.csv':
+        delim = ','
+    else:
+        raise ValueError("File %s is not csv or txt")
+    return np.loadtxt(fname, unpack=True, dtype=np.float, delimiter=delim)
+
+
+def reshape_array(val, shape):
+    """ Reshape an array, but not a scalar
+
+    This is useful for broadcasting many arrays to the same shape
+    """
+    if np.isscalar(val):
+        return val
+    return val.reshape(shape)

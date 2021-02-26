@@ -14,7 +14,8 @@ co (dict): CO Emission lines [Hz]
 """
 
 import numpy as np
-import jax.numpy as jnp
+#import jax.numpy as jnp
+jnp = np
 
 h = 6.6261e-34
 kB = 1.3806e-23
@@ -25,8 +26,7 @@ ep0 = 8.854188e-12
 Z0 = np.sqrt(mu0/ep0)
 Tcmb = 2.725
 
-
-# ***** Helper Methods *****
+_ = """
 def check_inputs(x, inputs=None):
     ret = []
     if isinstance(x, np.ndarray) or isinstance(x, list):
@@ -60,10 +60,9 @@ def check_inputs(x, inputs=None):
         raise Exception(
             "Non-numeric value %s passed in Physics" % (str(x)))
     return ret
+"""
 
 
-
-# ***** Public Methods *****
 def lamb(freq, ind=1.0):
     """
     Convert from from frequency [Hz] to wavelength [m]
@@ -124,9 +123,9 @@ def apert_illum(freq, pixd, fnum, wf=3.0):
     wf (float): beam waist factor
     """
     #freq, pixd, fnum, wf = _check_inputs(freq, [pixd, fnum, wf])
-    lamb = lamb(freq)
+    lamb_val = lamb(freq)
     w0 = pixd / wf
-    theta_stop = lamb / (np.pi * w0)
+    theta_stop = lamb_val / (np.pi * w0)
     theta_apert = jnp.arange(0., jnp.arctan(1. / (2. * fnum)), 0.01)
     V = jnp.exp(-jnp.power(theta_apert, 2.) / jnp.power(theta_stop, 2.))
     eff_num = jnp.power(
@@ -186,11 +185,17 @@ def Trj_over_Tb(freq, Tb):
     return 1. / thermo_fact
 
 def Tb_from_spec_rad(freq, pow_spec):
+    """
+    FIXME
+    """
     return (
-        (h * freq / kB) / 
+        (h * freq / kB) /
         jnp.log((2 * h * (freq**3 / c**2) / pow_spec) + 1))
 
 def Tb_from_Trj(freq, Trj):
+    """
+    FIXME
+    """
     alpha = (h * freq) / kB
     return alpha / jnp.log((2 * alpha / Trj) + 1)
 
@@ -215,8 +220,7 @@ def dielectric_loss(freq, thick, ind, ltan):
     ind (float): index of refraction
     ltan (float): loss tangent
     """
-    freq, thick, ind, ltan = _check_inputs(
-        freq, [thick, ind, ltan])
+    #freq, thick, ind, ltan = _check_inputs(freq, [thick, ind, ltan])
     return 1. - jnp.exp(
         (-2. * PI * ind * ltan * thick) / (lamb(freq)))
 
@@ -242,8 +246,8 @@ def n_occ(freq, temp):
     #freq, temp = _check_inputs(freq, [temp])
     fact = (h * freq)/(kB * temp)
     fact = jnp.where(fact > 100, 100, fact)
-    with jnp.errstate(divide='raise'):
-        return 1. / (jnp.exp(fact) - 1.)
+    #with jnp.errstate(divide='raise'):
+    return 1. / (jnp.exp(fact) - 1.)
 
 def a_omega(freq):
     """
@@ -297,7 +301,8 @@ def ani_pow_spec(freq, temp, emiss=1.0):
     emiss (float): blackbody emissivity, Defaults to 1.
     """
     #freq, temp, emiss = _check_inputs(freq, [temp, emiss])
-    return (((h**2) / kB) * emiss *
-            (n_occ(freq, temp)**2) * ((freq**2)/(temp**2)) *
-            jnp.exp((h * freq)/(kB * temp)))
+    return emiss * kB * jnp.exp((h * freq)/(kB * temp)) * (h*freq*n_occ(freq, temp) / kB*temp)**2
 
+def pow_frac(T1, T2, freqs):
+    """ Fractional power between two physical temperatures """
+    return bb_pow_spec(freqs, T1) / bb_pow_spec(freqs, T2)

@@ -1,3 +1,3 @@
 """ Bolometric Calculations for CMB S4 """
 
-from .example import Example
+from .top import Top
