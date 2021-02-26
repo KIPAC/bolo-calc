@@ -2,6 +2,7 @@
 Example unit tests for bolo-calc package
 """
 import unittest
+import yaml
 import bolo
 
 class ExampleTestCase(unittest.TestCase):
@@ -12,13 +13,15 @@ class ExampleTestCase(unittest.TestCase):
         pass
 
     def test_run(self):
-        foo = bolo.Example(self.message)
-        self.assertEqual(foo.run(), self.message)
+        dd = yaml.safe_load(open('config/myExample.yaml'))
+        dd['sim_config']['config_dir'] = 'config'
+        top = bolo.Top(**dd)
+        top.run()
+        top.instrument.print_summary()
+        top.instrument.write_tables('test.fits')
 
     def test_failure(self):
-        self.assertRaises(AttributeError, bolo.bolo-calc)
-        foo = bolo.Example(self.message)
-        self.assertRaises(RuntimeError, foo.run, True)
+        pass
 
 if __name__ == '__main__':
     unittest.main()
