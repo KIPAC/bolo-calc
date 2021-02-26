@@ -44,6 +44,8 @@ nosetests.xml
 coverage.xml
 *,cover
 .hypothesis/
+test.fits
+config/atm_20201217.hdf5
 
 # Translations
 *.mo
