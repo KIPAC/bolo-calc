@@ -88,6 +88,11 @@ class Instrument(Model):
         if self._tables:
             self._tables.save_datatables(filename)
 
+    @property
+    def tables(self):
+        """ Get the out put data tables"""
+        return self._tables 
+            
     def print_summary(self, stream=sys.stdout):
         """ Print summary stats in humman readable format """
         for key, val in self._sns_dict.items():
