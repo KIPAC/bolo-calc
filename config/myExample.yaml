@@ -1,6 +1,6 @@
 sim_config:
-  nsky_sim: 10
-  ndet_sim: 10
+  nsky_sim: 50
+  ndet_sim: 50
   save_summary: True
   save_sim: True
   config_dir: ../config

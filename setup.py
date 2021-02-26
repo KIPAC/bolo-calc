@@ -22,5 +22,5 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         ],
-    install_requires=['numpy', 'jax', 'jaxlib', 'pyyaml', 'cfgmdl'],
+    install_requires=['numpy', 'astropy', 'pyyaml', 'cfgmdl'],
 )
