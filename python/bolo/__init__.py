@@ -2,4 +2,3 @@
 
 from .top import Top
 
-raise ValueError("aa")
