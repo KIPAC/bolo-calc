@@ -4,24 +4,26 @@ import numpy as np
 import scipy.stats as sps
 
 from collections import OrderedDict as odict
+from collections.abc import Iterable
 
 from copy import deepcopy
 
-from cfgmdl import Property, Parameter, ParamHolder
+from cfgmdl import Property, Parameter, ParamHolder, Choice
 from cfgmdl.utils import is_none, defaults_decorator
 
 from .pdf import ChoiceDist
 from .interp import FreqIntrep
 from .utils import cfg_path
 
-class ParamOrInterpHolder(ParamHolder):
+class VariableHolder(ParamHolder):
     """ Allows parameter values to be interpolated using a frequency repsonse file"""
 
-    interp = Property(dtype=str, default=None, help="Interoplation file")
-
+    fname = Property(dtype=str, default=None, help="Data file")
+    var_type = Choice(choices=['pdf', 'dist', 'gauss', 'const'], default='const')                          
+    
     def __init__(self, *args, **kwargs):
         """ Constuctor """
-        super(ParamOrInterpHolder, self).__init__(*args, **kwargs)
+        super(VariableHolder, self).__init__(*args, **kwargs)
         self._sampled_values = None
         self._cached_interps = None
 
@@ -31,145 +33,85 @@ class ParamOrInterpHolder(ParamHolder):
 
         This allows using a single parameter to represent multiple channels
         """
-        if chan_idx is None:
+        if not isinstance(arr, Iterable):
             return arr
-        if np.isscalar(arr):
+        if not arr.shape:
             return arr
-        if isinstance(arr, FreqIntrep):
-            return arr
-        if arr.size < 2:
-            return arr
+        if len(arr) < 2:
+            return arr[0]
         return arr[chan_idx]
 
     def _cache_interps(self):
         """ Cache the interpolator object """
-        self._cached_interps = None
-        if self.interp is None:
+        if self.var_type == 'const':
+            self._cached_interps = None
             return
-        tokens = self.interp.split(',')
-        if len(tokens) == 1:
-            self._cached_interps = FreqIntrep(cfg_path(tokens[0]))
-        else:
-            self._cached_interps = np.array([FreqIntrep(cfg_path(token)) for token in tokens])
-
-    def rvs(self, freqs, nsamples, chan_idx=0):
+        if self.var_type == 'gauss':
+            if np.isnan(self.errors).any():
+                self._cached_interps = None
+                return
+            
+            self._cached_interps = np.array([ sps.norm(loc=val_, scale=sca_) for val_, sca_ in zip(np.atleast_1d(self.value), np.atleast_1d(self.errors))])
+            return
+        tokens = self.fname.split(',')
+        if self.var_type == 'pdf':
+            self._cached_interps = np.array([ChoiceDist(cfg_path(token)) for token in tokens])
+            self._value = np.array([ pdf.mean() for pdf in self._cached_interps ])
+            return
+        self._cached_interps = np.array([FreqIntrep(cfg_path(token)) for token in tokens])            
+        self._value = np.array([ pdf.mean_trans() for pdf in self._cached_interps ])
+        
+    def rvs(self, nsamples, freqs=None, chan_idx=0):
         """ Sample values
 
         This just returns the sampled values.
         It does not store them.
         """
+        self._cache_interps()        
         val = self._channel_value(self.value, chan_idx)
-        if self.interp is None or not nsamples:
+        if self._cached_interps is None or not nsamples:
             return val
-        errs = self._channel_value(self.errors, chan_idx)
-        self._cache_interps()
-        if self._cached_interps is None:
-            if np.isnan(errs):
-                return val
-            return sps.norm(loc=val, scale=errs).rvs(nsamples).reshape((nsamples, 1))
         interp = self._channel_value(self._cached_interps, chan_idx)
+        if self.var_type == 'gauss':
+            return interp.rvs(nsamples).reshape((nsamples, 1))
+        if self.var_type == 'pdf':
+            return interp.rvs(nsamples).reshape((nsamples, 1))
         return interp.rvs(freqs, nsamples).reshape((nsamples, len(freqs)))
-
-    def sample(self, freqs, nsamples, chan_idx=None):
+    
+    def sample(self, nsamples, freqs=None, chan_idx=0):
         """ Sample values
 
         This stores the sampled values.
         """
-        self._sampled_values = self.rvs(freqs, nsamples, chan_idx)
-        return self._sampled_values
+        self._sampled_values = self.rvs(nsamples, freqs, chan_idx)
+        return self.SI
 
     def unsample(self):
         """ This removes the stored sampled values"""
         self._sampled_values = None
 
-    def __call__(self):
+    @property
+    def scaled(self):
         """Return the product of the value and the scale
 
         This uses the stored sampled values if they are present.
         """
         if self._sampled_values is not None:
             return self._sampled_values*self.scale
-        return super(ParamOrInterpHolder, self).__call__()
+        return super(VariableHolder, self).scaled
 
 
-class ParamOrInterp(Parameter):
+class Variable(Parameter):
     """ Property sub-class to allow parameter values
     to be interpolated using a frequency repsonse file
     """
 
     defaults = deepcopy(Parameter.defaults)
-    defaults['dtype'] = (ParamOrInterpHolder, "Data type")
+    defaults['dtype'] = (VariableHolder, "Data type")
 
     @defaults_decorator(defaults)
     def __init__(self, **kwargs):
-        super(ParamOrInterp, self).__init__(**kwargs)
-
-
-class ParamOrPDFHolder(ParamHolder):
-    """ Allows parameter values to be sampled using a PDF or means and errors """
-
-    pdf = Property(dtype=str, default=None, help="PDF file")
-
-    def __init__(self, *args, **kwargs):
-        """ Constuctor """
-        super(ParamOrPDFHolder, self).__init__(self, *args, **kwargs)
-        self._sampled_values = None
-
-    def sampler(self):
-        """ Construct and return an object to do the sampling"""
-        if self.pdf is None:
-            if np.isnan(self.errors).any():
-                return None
-            return sps.norm(loc=self.value, scale=self.errors)
-        return ChoiceDist(cfg_path(self.pdf))
-
-    def rvs(self, nsamples):
-        """ Sample values
-
-        This just returns the sampled values.
-        It does not store them.
-        """
-        if nsamples or self.pdf is not None:
-            pdf = self.sampler()
-        else:
-            pdf = None
-        if pdf is None:
-            return None
-        if nsamples:
-            return pdf.rvs(nsamples)
-        return pdf.mean()
-
-    def sample(self, nsamples):
-        """ Sample values
-
-        This stores the sampled values.
-        """
-        self._sampled_values = self.rvs(nsamples)
-        return self._sampled_values
-
-    def unsample(self):
-        """ This removes the stored sampled values"""
-        self._sampled_values = None
-
-    def __call__(self):
-        """Return the product of the value and the scale
-
-        This uses the stored sampled values if they are present.
-        """
-        if self._sampled_values is not None:
-            return self._sampled_values*self.scale
-        return super(ParamOrPDFHolder, self).__call__()
-
-
-class ParamOrPdf(Parameter):
-    """ Allows parameter values to be sampled using a PDF or means and errors """
-
-    defaults = deepcopy(Parameter.defaults)
-    defaults['dtype'] = (ParamOrPDFHolder, "Data type")
-
-    @defaults_decorator(defaults)
-    def __init__(self, **kwargs):
-        super(ParamOrPdf, self).__init__(**kwargs)
+        super(Variable, self).__init__(**kwargs)
 
     def _cast_type(self, value, obj=None):
         """Hook took override type casting"""
@@ -207,39 +149,17 @@ class StatsSummary:
 
 
 
-class Output(Property):
+class Output(Parameter):
     """ A property sub-class that will convert values back
     from SI units to input units.
 
     Also has a function to provide summary statistics
     """
 
-    defaults = deepcopy(Property.defaults)
-    defaults['outname'] = (None, "Output Name")
-
-    def __get__(self, obj, objtype=None):
-        """Get the value from the client object
-
-        Parameter
-        ---------
-        obj : ...
-            The client object
-
-        Return
-        ------
-        out : ...
-            The requested value
-        """
-        attr = getattr(obj, self.private_name)
-        if self.unit is None or is_none(attr):
-            return attr
-        return self.unit.inverse(attr) #pylint: disable=not-callable
-
+    outname = Property(dtype=str, default=None)
+    
     def summarize(self, obj):
         """ Compute and return the summary statistics """
         unit_name = ""
-        val = getattr(obj, self.private_name)
-        if self.unit:
-            unit_name = self.unit.name
-            val = self.unit.inverse(val)
+        val = getattr(obj, self.private_name).from_SI
         return StatsSummary(self.public_name, val, unit_name)

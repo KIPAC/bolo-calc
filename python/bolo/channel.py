@@ -2,48 +2,48 @@
 
 import numpy as np
 
-from cfgmdl import Property, Model
+from cfgmdl import Property, Parameter, Model
 
 from .utils import is_not_none, is_none
 #from . import physics, noise
 from . import noise
 from .sky import Universe
-from .unit import Unit
-from .cfg import ParamOrInterp, ParamOrPdf
+#from .unit import Unit
+from .cfg import Variable
 
 class Channel(Model):  #pylint: disable=too-many-instance-attributes
     """ Channel Model """
 
     _min_tc_tb_diff = 0.010
 
-    band_center = Property(dtype=float, unit=Unit("GHz"))
-    fractional_bandwidth = Property(dtype=float, default=.35)
-    band_response = ParamOrInterp(default=1.)
+    band_center = Parameter(unit="GHz")
+    fractional_bandwidth = Parameter(default=.35)
+    band_response = Variable(default=1.)
 
-    det_eff = ParamOrPdf(default=1.)
-    squid_nei = ParamOrPdf(default=1., unit=Unit('pA/rtHz'))
-    bolo_resistance = ParamOrPdf(default=1., unit=Unit('Ohm'))
+    det_eff = Variable(default=1.)
+    squid_nei = Variable(default=1., unit='pA/rtHz')
+    bolo_resistance = Variable(default=1., unit='Ohm')
 
-    pixel_size = Property(dtype=float, default=6.8, unit=Unit('mm'))
-    waist_factor = Property(dtype=int, default=3)
+    pixel_size = Parameter(default=6.8, unit='mm')
+    waist_factor = Parameter(default=3.)
 
-    Tc = Property(default=.165, unit=Unit('K'))
-    Tc_fraction = Property(dtype=float)
+    Tc = Parameter(default=.165, unit='K')
+    Tc_fraction = Parameter()
 
     num_det_per_water = Property(dtype=int, default=542)
     num_wafer_per_optics_tube = Property(dtype=int, default=1)
     num_optics_tube = Property(dtype=int, default=3)
 
-    psat = Property(dtype=float)
-    psat_factor = Property(dtype=float, default=3.)
+    psat = Parameter()
+    psat_factor = Parameter(default=3.)
 
-    read_frac = Property(dtype=float, default=0.1)
-    carrier_index = Property(dtype=float, default=3)
-    G = Property(dtype=float, unit=Unit('pW/K'))
-    Flink = Property(dtype=float)
-    Yield = Property(dtype=float)
-    response_factor = Property(dtype=float)
-    nyquist_inductance = Property(dtype=float)
+    read_frac = Parameter(default=0.1)
+    carrier_index = Parameter(default=3)
+    G = Parameter(unit='pW/K')
+    Flink = Parameter()
+    Yield = Parameter()
+    response_factor = Parameter()
+    nyquist_inductance = Parameter()
 
     def __init__(self, **kwargs):
         """ Constructor """
@@ -68,9 +68,9 @@ class Channel(Model):  #pylint: disable=too-many-instance-attributes
 
     def sample(self, nsamples):
         """ Sample PDF parameters """
-        self._det_eff.sample(nsamples)
-        self._squid_nei.sample(nsamples)
-        self._bolo_resistance.sample(nsamples)
+        self.det_eff.sample(nsamples)
+        self.squid_nei.sample(nsamples)
+        self.bolo_resistance.sample(nsamples)
 
     @property
     def camera(self):
@@ -99,49 +99,49 @@ class Channel(Model):  #pylint: disable=too-many-instance-attributes
 
     def bolo_NEP(self, opt_pow):
         """ Return the bolometric NEP given the detector details """
-        tb = self._camera.bath_temperature
-        tc = self.Tc
+        tb = self._camera.bath_temperature()
+        tc = self.Tc()
         n = 1. #self.n
-        if is_not_none(self.G):
-            g = self.G
+        if is_not_none(self.G) and np.isfinite(self.G()).all():
+            g = self.G()
         else:
-            if is_not_none(self.psat_factor):
-                p_sat = opt_pow * self.psat_factor
+            if is_not_none(self.psat_factor) and np.isfinite(self.psat_factor()):
+                p_sat = opt_pow * self.psat_factor()
             else:
-                p_sat = self.psat
+                p_sat = self.psat()
             g = noise.G(p_sat, n, tb, tc)
-        if is_not_none(self.Flink):
-            flink = self.Flink
+        if is_not_none(self.Flink) and np.isfinite(self.Flink()):
+            flink = self.Flink()
         else:
             flink = noise.Flink(n, tb, tc)
         return noise.bolo_NEP(flink, g, tc)
 
     def read_NEP(self, opt_pow):
         """ Return the readout NEP given the detector details """
-        if np.isnan(self.squid_nei).any():
+        if np.isnan(self.squid_nei()).any():
             return None
-        if np.isnan(self.bolo_resistance).any():
+        if np.isnan(self.bolo_resistance()).any():
             return None
-        if is_none(self.psat):
-            p_stat = self.psat_factor * opt_pow
+        if is_not_none(self.psat) and np.isfinite(self.psat()).all():
+            p_stat = self.psat()
         else:
-            p_stat = self.psat
+            p_stat = self.psat_factor() * opt_pow
         p_bias = (p_stat - opt_pow).clip(0, np.inf)
-        if is_not_none(self.response_factor):
-            s_fact = self.response_factor
+        if is_not_none(self.response_factor) and np.isfinite(self.response_factor()).all():
+            s_fact = self.response_factor()
         else:
-            s_fact = 1.
-        return noise.read_NEP(p_bias, self.bolo_resistance, self.squid_nei, s_fact)
+            s_fact = 1.        
+        return noise.read_NEP(p_bias, self.bolo_resistance().T, self.squid_nei().T, s_fact)
 
     def compute_evaluation_freqs(self, freq_resol=None):
         """ Compute and return the evaluation frequencies """
-        self.bandwidth = self.band_center * self.fractional_bandwidth
+        self.bandwidth = self.band_center() * self.fractional_bandwidth()
         if freq_resol is None:
             freq_resol = 0.25*self.bandwidth
         else:
-            freq_resol = freq_resol * self.band_center
-        fmin = self.band_center - 0.5*self.bandwidth
-        fmax = self.band_center + 0.5*self.bandwidth
+            freq_resol = freq_resol * self.band_center()
+        fmin = self.band_center() - 0.5*self.bandwidth
+        fmax = self.band_center() + 0.5*self.bandwidth
         freq_step = np.ceil(self.bandwidth/freq_resol).astype(int)
         return np.linspace(fmin, fmax, freq_step+1)
 
@@ -160,12 +160,12 @@ class Channel(Model):  #pylint: disable=too-many-instance-attributes
     def eval_det_response(self, nsample=0, freq_resol=None):
         """ Evaluate the detector response for this channel """
         self._freqs = self.compute_evaluation_freqs(freq_resol)
-        self._band_response.sample(self._freqs, nsample)
-        self._det_eff.sample(nsample)
-        def_eff_shaped = np.expand_dims(self.det_eff, -1)
-        self._det_effic = self.band_response * def_eff_shaped
+        self.band_response.sample(nsample, self._freqs)
+        self.det_eff.sample(nsample)
+        #def_eff_shaped = np.expand_dims(self.det_eff(), -1)
+        self._det_effic = self.band_response() * self.det_eff()
         self._det_emiss = 0.
-        self._det_temp = self._camera.bath_temperature
+        self._det_temp = self._camera.bath_temperature()
 
     def eval_sky(self, universe, freq_resol=None):
         """ Evaluate the sky parameters for this channel

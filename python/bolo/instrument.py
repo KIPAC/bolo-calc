@@ -4,7 +4,7 @@ import sys
 
 from collections import OrderedDict as odict
 
-from cfgmdl import Property, Model
+from cfgmdl import Property, Parameter, Model
 from astropy.table import vstack
 
 from .readout import Readout
@@ -12,24 +12,24 @@ from .optics import build_optics_class
 from .camera import build_cameras
 from .sensitivity import Sensitivity
 
-from .unit import Unit
+#from .unit import Unit
 from .data_utils import TableDict
-from .cfg import ParamOrPdf
+from .cfg import Variable
 
 
 class Instrument(Model):
     """ Class to represent an instrument """
     site = Property(dtype=str, required=True)
-    sky_temp = Property(dtype=float, required=True)
-    obs_time = Property(dtype=float, required=True, unit=Unit('yr'))
-    sky_fraction = Property(dtype=float, required=True)
-    NET = Property(dtype=float, required=True)
+    sky_temp = Parameter(required=True, unit='K')
+    obs_time = Parameter(required=True, unit='yr')
+    sky_fraction = Parameter(required=True)
+    NET = Parameter(required=True)
 
     custom_atm_file = Property(dtype=str)
 
-    elevation = ParamOrPdf(required=True)
-    pwv = ParamOrPdf(required=True)
-    obs_effic = ParamOrPdf(required=True)
+    elevation = Variable(required=True)
+    pwv = Variable(required=True)
+    obs_effic = Variable(required=True)
 
     readout = Property(dtype=Readout, required=True)
     camera_config = Property(dtype=dict, required=True)

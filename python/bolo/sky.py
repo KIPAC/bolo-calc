@@ -6,12 +6,12 @@ import numpy as np
 
 import h5py as hp
 
-from cfgmdl import Model, Property, cached
+from cfgmdl import Model, Property, Parameter, cached
 
 from .utils import is_not_none, cfg_path
 from . import physics
-from .unit import Unit
-from .cfg import ParamOrPdf
+#from .unit import Unit
+from .cfg import Variable
 
 GHz_to_Hz = 1.e+09
 m_to_mm = 1.e+03
@@ -99,7 +99,7 @@ class Atmosphere(Model):
             return
         self._telescope._pwv.sample(nsamples)
         self._telescope._elevation.sample(nsamples)
-        self._sampled_keys = model.get_keys(1e-6*np.atleast_1d(self._telescope.pwv), np.atleast_1d(self._telescope.elevation))
+        self._sampled_keys = model.get_keys(1e-6*np.atleast_1d(self._telescope.pwv()), np.atleast_1d(self._telescope.elevation()))
         self._nsamples = max(nsamples, 1)
 
     def temp(self, freqs):
@@ -127,17 +127,17 @@ class Foreground(Model):
     """
     Foreground model base class
     """
-    spectral_index = Property(required=True, help="Powerlaw index")
-    scale_frequency = Property(dtype=float, required=True, help="Frequency", unit=Unit("GHz"))
-    emiss = Property(default=1., help="Emissivity")
+    spectral_index = Parameter(required=True, help="Powerlaw index")
+    scale_frequency = Parameter(required=True, help="Frequency", unit="GHz")
+    emiss = Parameter(default=1., help="Emissivity")
 
 
 class Dust(Foreground):
     """
     Dust emission model
     """
-    amplitude = ParamOrPdf(required=True, help="Dust amplitude", unit=Unit("MJy"))
-    scale_temperature = ParamOrPdf(required=True, help="Temperature", unit=Unit('K'))
+    amplitude = Variable(required=True, help="Dust amplitude", unit="MJy")
+    scale_temperature = Variable(required=True, help="Temperature", unit='K')
 
     def __init__(self, **kwargs):
         """ Constructor """
@@ -148,17 +148,17 @@ class Dust(Foreground):
 
     def sample(self, nsamples):
         """ Sample this component """
-        self._amplitude.sample(nsamples)
-        self._scale_temperature.sample(nsamples)
+        self.amplitude.sample(nsamples)
+        self.scale_temperature.sample(nsamples)
 
-        self.amp = np.expand_dims(np.expand_dims(self.amplitude.size, -1), -1)
-        self.scale_temp = np.expand_dims(np.expand_dims(self.scale_temperature.size, -1), -1)
+        self.amp = np.expand_dims(np.expand_dims(self.amplitude(), -1), -1)
+        self.scale_temp = np.expand_dims(np.expand_dims(self.scale_temperature(), -1), -1)
         self._nsamples = max(self.amp.size, self.scale_temp.size)
 
     def temp(self, freqs):
         """ Get sampled temperatures """
         out_shape = (self._nsamples, 1, len(freqs))
-        return self.__temp(freqs, self.emiss, self.amp, self.scale_frequency, self.spectral_index, self.scale_temp).reshape(out_shape)
+        return self.__temp(freqs, self.emiss.SI, self.amp, self.scale_frequency.SI, self.spectral_index.SI, self.scale_temp).reshape(out_shape)
         #self.__temp(freqs).reshape(out_shape)
 
     #@Function
@@ -191,24 +191,24 @@ class Synchrotron(Foreground):
     """
     Synchrotron emission model
     """
-    amplitude = ParamOrPdf(required=True, help="Dust amplitude", unit=Unit("K_RJ"))
+    amplitude = Variable(required=True, help="Dust amplitude", unit="K_RJ")
 
     def __init__(self, **kwargs):
         """ Constructor """
-        self._nsamples = 1
         self.amp = None
+        self._nsamples = 1
         super(Synchrotron, self).__init__(**kwargs)
 
     def sample(self, nsamples):
         """ Sample this component """
-        self._amplitude.sample(nsamples)
-        self.amp = np.expand_dims(np.expand_dims(self.amplitude.size, -1), -1)
+        self.amplitude.sample(nsamples)
+        self.amp = np.expand_dims(np.expand_dims(self.amplitude(), -1), -1)
         self._nsamples = self.amp.size
 
     def temp(self, freqs):
         """ Get sampled temperatures """
         out_shape = (self._nsamples, 1, len(freqs))
-        return self.__temp(freqs, self.emiss, self.amp, self.scale_frequency, self.spectral_index).reshape(out_shape)
+        return self.__temp(freqs, self.emiss.SI, self.amp, self.scale_frequency.SI, self.spectral_index.SI).reshape(out_shape)
         #self.__temp(freqs).reshape(out_shape)
 
     @staticmethod

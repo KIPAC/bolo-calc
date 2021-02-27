@@ -10,7 +10,7 @@ universe:
     spectral_index: 1.5
     amplitude: 1.2E-2
     scale_frequency: 353.0
-    scale_temperature: { pdf : Pdf/dustTemperature.txt }
+    scale_temperature: { var_type : pdf, fname : Pdf/dustTemperature.txt }
   synchrotron:
     spectral_index: -3.0
     amplitude: 2.0E-4
@@ -22,10 +22,10 @@ instrument:
   site : Atacama
   sky_temp : None
   elevation : 50.
-  pwv : { pdf : Pdf/pwv.txt }
+  pwv : { var_type : pdf, fname : Pdf/pwv.txt }
   obs_time : 5.
   sky_fraction : 0.2
-  obs_effic :  { pdf : Pdf/observationEfficiency.txt }
+  obs_effic :  { var_type : pdf, fname : Pdf/observationEfficiency.txt }
   NET : 1.0  
   readout:
     read_noise_frac: .1
@@ -41,11 +41,11 @@ instrument:
       primary: { obj_type : Mirror, temperature : 273., absorption : 0.002, spillover : 0.01 }
       mirror: { obj_type : Mirror, temperature : 273., absorption : 0.002 }
       window:
-        temperature : { pdf : Pdf/Window_temperature.txt }
+        temperature : { var_type : pdf, fname : Pdf/Window_temperature.txt }
         absorption : 0.005
-        reflection : { interp : Bands/Optics/Window_reflection.txt }
+        reflection : { var_type : dist, fname : Bands/Optics/Window_reflection.txt }
         spillover : 0.02
-        scatter_frac : { interp : Bands/Optics/Window_scatterFrac.txt }
+        scatter_frac : { var_type : dist, fname : Bands/Optics/Window_scatterFrac.txt }
       IRshader1: { temperature : 291, absorption : 0.001 }
       IRshader2: { temperature : 245., absorption : 0.001 }
       IRshader3: { temperature : 200., absorption : 0.001 }
@@ -94,16 +94,16 @@ instrument:
           elements:
             chan_1:
               band_center: 100.
-              det_eff: { pdf : Pdf/detEff_1.txt }
-              band_response : { interp : Bands/Cam_1.txt }
+              det_eff: { var_type : pdf, fname : Pdf/detEff_1.txt }
+              band_response : { var_type : dist, fname : Bands/Cam_1.txt }
               read_frac: 0.1              
             chan_2:
               band_center: 150.
               fractional_bandwidth: .35    
               response_factor: 1.41
-              det_eff: { pdf : Pdf/detEff_2.txt }              
-              squid_nei: { pdf : Pdf/squidNEI_2.txt }
-              bolo_resistance: { value : 1.0, errors : 0.1 }
+              det_eff: { var_type : pdf, fname : Pdf/detEff_2.txt }              
+              squid_nei: { var_type : pdf, fname : Pdf/squidNEI_2.txt }
+              bolo_resistance: { var_type: gauss, value : 1.0, errors : 0.1 }
               read_frac: None
       cam_2:
         skip_optical_elements: []
@@ -111,14 +111,14 @@ instrument:
           elements:
             chan_1:
               band_center: 100.
-              det_eff: { pdf : Pdf/detEff_1.txt }
-              band_response : { interp : Bands/Cam_1.txt }
+              det_eff: { var_type : pdf, fname : Pdf/detEff_1.txt }
+              band_response : { var_type : dist, fname : Bands/Cam_1.txt }
               read_frac: 0.1              
             chan_2:
               band_center: 150.
               fractional_bandwidth: .35    
               response_factor: 1.41
-              det_eff: { pdf : Pdf/detEff_2.txt }              
-              squid_nei: { pdf : Pdf/squidNEI_2.txt }
-              bolo_resistance: { value : 1.0, errors : 0.1 }
+              det_eff: { var_type : pdf, fname : Pdf/detEff_2.txt }              
+              squid_nei: { var_type : pdf, fname : Pdf/squidNEI_2.txt }
+              bolo_resistance: { var_type: gauss, value : 1.0, errors : 0.1 }
               read_frac: None
