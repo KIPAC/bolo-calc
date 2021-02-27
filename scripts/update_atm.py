@@ -34,8 +34,6 @@ def main():
     top_dir = os.path.abspath(os.path.dirname(__file__)).replace('/scripts', '')
     atm_file = os.path.join(top_dir, "scripts", fname)
     new_atm_file = os.path.join(top_dir, "config", fname)
-    print(atm_file, new_atm_file)
-    return
 
     url_name = ("http://pbfs.physics.berkeley.edu/BoloCalc/ATM/%s" % (fname))
     ul.urlretrieve(url_name, atm_file, reporthook)
