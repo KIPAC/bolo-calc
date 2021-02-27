@@ -1,10 +1,10 @@
 from setuptools import setup
 
-from python.bolo import version
+from version import get_git_version
 
 setup(
     name="bolo",
-    version=version.get_git_version(),
+    version=get_git_version(),
     author="",
     author_email="",
     url = "https://github.com/KIPAC/bolo-calc",
