@@ -117,7 +117,7 @@ def read_release_version():
     dirname = os.path.abspath(os.path.dirname(__file__))
 
     try:
-        f = open(os.path.join(dirname, "_version.py"), "rt")
+        f = open(os.path.join(dirname, "python", "bolo", "_version.py"), "rt")
         for line in f.readlines():
 
             m = re.match("__version__ = '([^']+)'", line)
@@ -134,7 +134,7 @@ def read_release_version():
 def write_release_version(version):
     """Write the release version to ``_version.py``."""
     dirname = os.path.abspath(os.path.dirname(__file__))
-    f = open(os.path.join(dirname, "_version.py"), "wt")
+    f = open(os.path.join(dirname, "python", "bolo", "_version.py"), "wt")
     f.write("__version__ = '%s'\n" % version)
     f.close()
 
