@@ -1,5 +1,12 @@
 # The bolo-calc package
 
+## Background
+
+The package is ported from a previous implementation of Bolometric calculations written by Charlie Hill (https://chillphysics.com/about/) and available at: https://github.com/chill90/BoloCalc
+
+As of the initial version, the overall flow of the computation, as well as the set of configurable parameters, the ouputs and the equations used to perform the calculations are taken from the original version.   This version changes the way in which the configuration is handled, and vectorized the computations.
+
+
 ## Set-up and testing
 Setup from bash
 ```
