@@ -23,12 +23,12 @@ py.test
 
 Running script (from top-level bolo-calc directory)
 ```
-scripts/bolo-calc.py -i config/myExample.py -o test.fits
+scripts/bolo-calc.py -i config/myExample.yaml -o test.fits
 ```
 
 Running jupyter notebook (from top-level bolo-calc directory)
 ```
-jupyter-notebook nb/bolo-example.ipynb
+jupyter-notebook nb/bolo_example.ipynb
 ```
 
 
