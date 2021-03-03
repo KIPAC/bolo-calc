@@ -113,10 +113,10 @@ class Channel(Model):  #pylint: disable=too-many-instance-attributes
     def bolo_NEP(self, opt_pow):
         """ Return the bolometric NEP given the detector details """
         tb = self._camera.bath_temperature()
-        tc = self.Tc()
+        tc = self.Tc.SI
         n = 1. #self.n
         if is_not_none(self.G) and np.isfinite(self.G.SI).all():
-            g = self.G()
+            g = self.G.SI
         else:
             if is_not_none(self.psat_factor) and np.isfinite(self.psat_factor.SI):
                 p_sat = opt_pow * self.psat_factor.SI
@@ -148,13 +148,13 @@ class Channel(Model):  #pylint: disable=too-many-instance-attributes
 
     def compute_evaluation_freqs(self, freq_resol=None):
         """ Compute and return the evaluation frequencies """
-        self.bandwidth = self.band_center() * self.fractional_bandwidth()
+        self.bandwidth = self.band_center.SI * self.fractional_bandwidth.SI
         if freq_resol is None:
             freq_resol = 0.05*self.bandwidth
         else:
             freq_resol = freq_resol * 1e9
-        self._flo = self.band_center() - 0.5*self.bandwidth
-        self._fhi = self.band_center() + 0.5*self.bandwidth
+        self._flo = self.band_center.SI - 0.5*self.bandwidth
+        self._fhi = self.band_center.SI + 0.5*self.bandwidth
         freq_step = np.ceil(self.bandwidth/freq_resol).astype(int)
 
         self._freqs = np.linspace(self._flo, self._fhi, freq_step+1)

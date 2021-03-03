@@ -86,15 +86,15 @@ class OpticalElement(Model):
         results_.temp = self.temperature.SI
         results_.refl = self.reflection.sample(nsample, freqs, chan_idx)
         results_.spil = self.spillover.sample(nsample, freqs, chan_idx)
-        if is_not_none(self.surface_rough) and np.isfinite(self.surface_rough()).all():
+        if is_not_none(self.surface_rough) and np.isfinite(self.surface_rough.SI).all():
             results_.scat = 1. - physics.ruze_eff(freqs, self.surface_rough)
         else:
             results_.scat = self.scatter_frac.sample(nsample, freqs, chan_idx)
-        if is_not_none(self.spillover_temp) and np.isfinite(self.spillover_temp()).all():
+        if is_not_none(self.spillover_temp) and np.isfinite(self.spillover_temp.SI).all():
             results_.spil_temp = self.spillover_temp.SI
         else:
             results_.spil_temp = results_.temp
-        if is_not_none(self.scatter_temp) and np.isfinite(self.scatter_temp()).all():
+        if is_not_none(self.scatter_temp) and np.isfinite(self.scatter_temp.SI).all():
             results_.scat_temp = self.scatter_temp.SI
         else:
             results_.scat_temp = results_.temp
@@ -121,8 +121,8 @@ class Mirror(OpticalElement):
 
     def calc_abso(self, channel, freqs, nsample):
         """ Compute the absorption for a given channel """
-        if is_not_none(self.conductivity) and np.isfinite(self.conductivity()).all():
-            return 1. - physics.ohmic_eff(freqs, self.conductivity())
+        if is_not_none(self.conductivity) and np.isfinite(self.conductivity.SI).all():
+            return 1. - physics.ohmic_eff(freqs, self.conductivity.SI)
         return super(Mirror, self).calc_abso(channel, freqs, nsample)
 
 
@@ -136,7 +136,7 @@ class Dielectric(OpticalElement):
     def calc_abso(self, channel, freqs, nsample):
         """ Compute the absorption for a given channel """
         if is_not_none(self.thickness) and is_not_none(self.index) and is_not_none(self.loss_tangent):
-            return physics.dielectric_loss(freqs, self.thickness(), self.index(), self.loss_tangent())
+            return physics.dielectric_loss(freqs, self.thickness.SI, self.index.SI, self.loss_tangent.SI)
         return super(Dielectric, self).calc_abso(channel, freqs, nsample)
 
 
