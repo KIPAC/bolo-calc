@@ -40,7 +40,7 @@ set_config_dir = CFG_DIR.set_dir
 get_config_dir = CFG_DIR.get_dir
 cfg_path = CFG_DIR.cfg_path
 
-    
+
 def copy_dict(in_dict, def_dict):
     """Copy a set of key-value pairs to an new dict
 

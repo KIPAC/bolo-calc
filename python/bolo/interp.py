@@ -31,8 +31,11 @@ class FreqIntrep:
 
     def mean(self):
         """ Return the weighted mean of the interpolation curve """
-        return np.mean(self.freq*self.tran)
+        return np.sum(self.freq*self.tran)/np.sum(self.tran)
 
+    def mean_trans(self):
+        """ Return the value at the mean of the interpolation curve """
+        return np.interp(self.mean(), self.freq, self.tran)
 
     def cache_grid(self, freqs):
         """ Cache the values and errors from the interpolation grid """

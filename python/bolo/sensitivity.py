@@ -1,6 +1,5 @@
 """ Sensitivity calculation """
 import sys
-
 import numpy as np
 
 from collections import OrderedDict as odict
@@ -31,8 +30,17 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
     """
     effic = Output()
     opt_power = Output(unit=Unit('pW'))
+
+    tel_power = Output(unit=Unit('pW'))
+    sky_power = Output(unit=Unit('pW'))
+
     tel_rj_temp = Output(unit=Unit('K'))
     sky_rj_temp = Output(unit=Unit('K'))
+
+    elem_effic = Output()
+    elem_cumul_effic = Output()
+    elem_power_from_sky = Output(unit=Unit('pW'))
+    elem_power_to_det = Output(unit=Unit('pW'))
 
     NEP_bolo = Output(unit=Unit('aW/rtHz'))
     NEP_read = Output(unit=Unit('aW/rtHz'))
@@ -51,8 +59,16 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
     NET_arr_RJ = Output(unit=Unit('uK-rts'))
 
     corr_fact = Output()
+
     map_depth = Output(unit=Unit('uK-amin'))
     map_depth_RJ = Output(unit=Unit('uK-amin'))
+
+
+    summary_fields = ['effic', 'opt_power', 'tel_rj_temp', 'sky_rj_temp', 'NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP_ph_corr', 'NEP', 'NEP_corr',
+                          'NET', 'NET_corr', 'NET_RJ', 'NET_corr_RJ', 'NET_arr', 'NET_arr_RJ',  'NET_arr_RJ', 'map_depth', 'map_depth_RJ']
+
+    optical_output_fields = ['elem_effic', 'elem_cumul_effic', 'elem_power_from_sky', 'elem_power_to_det']
+
 
     def __init__(self, channel):
         """ Constructor """
@@ -63,84 +79,151 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
         self._camera = self._channel.camera
         self._instrument = self._camera.instrument
         self._summary = None
+        self._optical_output = None
 
         self._freqs = channel.freqs
         self._bandwidth = channel.bandwidth
-        self._fsky = self._instrument.sky_fraction
-        self._obs_time = self._instrument.obs_time
-
-        self._obs_effic = np.expand_dims(self._instrument.obs_effic, -1)
+        self._fsky = self._instrument.sky_fraction()
+        self._obs_time = self._instrument.obs_time()
+        self._obs_effic = self._instrument.obs_effic()
 
         self.temps_list = channel.sky_temps + channel.optical_temps + [channel._det_temp]
         self._temps = bcast_list(self.temps_list)
-        self.trans_list = channel.sky_effic + channel.optical_effic + [channel._det_effic]
+        # Buffer both sides of the transmisison array, because we will be taking cumulatimve products that are offset by one
+        # (i.e., we want the product of all the elements downstream of a particular element)
+        self.trans_list = [0.] + channel.sky_effic + channel.optical_effic + [channel._det_effic] + [1.]
         self._trans = bcast_list(self.trans_list)
         self.emiss_list = channel.sky_emiss + channel.optical_emiss + [channel._det_emiss]
         self._emiss = bcast_list(self.emiss_list)
 
-        self._emiss = self._emiss.reshape((self._emiss.shape[0], self._emiss.shape[1], 1, self._emiss.shape[2]))
+        self._elem_names = channel.sky_names + list(self._camera.optics.keys()) + ['detector']
 
-        self._chan_effic = np.product(self._trans, axis=0)
-        self._elem_effic = np.cumprod(self._trans[::-1], axis=0)
+        # Fix the shapes of the arrays to match
+        if len(self._emiss.shape) == 2:
+            self._emiss = self._emiss.reshape((self._emiss.shape[0], 1, 1, self._emiss.shape[1]))
+        elif len(self._emiss.shape) == 3:
+            self._emiss = self._emiss.reshape((self._emiss.shape[0], 1, self._emiss.shape[1], self._emiss.shape[2]))
 
-        self._elem_power_by_freq = physics.bb_pow_spec(self._freqs, self._temps, self._emiss*self._elem_effic)
-        self._elem_power = np.trapz(self._elem_power_by_freq, self._freqs)
-        self._effic = np.trapz(self._chan_effic, self._freqs) / self._bandwidth
-        self._tel_effic = np.trapz(self._elem_effic[NSKY_SRC], self._freqs) / self._bandwidth
 
-        self._opt_power = np.sum(self._elem_power, axis=0)
-        self._tel_power = np.sum(self._elem_power[NSKY_SRC:], axis=0)
-        self._sky_power = np.sum(self._elem_power[:NSKY_SRC], axis=0)
+        # This total the transmission efficiency of a particular channel as a function of frequency
+        # Note that we have to pull out the padding here
+        self._chan_effic = np.product(self._trans[1:-1], axis=0)
 
-        self._tel_rj_temp = physics.rj_temp(self._tel_power, self._bandwidth, self._tel_effic)
-        self._sky_rj_temp = physics.rj_temp(self._sky_power, self._bandwidth, self._tel_effic)
+        # This is the efficiency of a particular element getting to the detector as a function of frequency
+        # Note that we have to pull out the padding here
+        # Note also that we want to take the cumulative sum starting at the detector side (thus the [::-1] to reverse the iteration direction)
+        self._elem_cumul_effic_by_freq = np.cumprod(self._trans[::-1], axis=0)[::-1][2:]
 
-        self._NEP_bolo = self._channel.bolo_NEP(self._opt_power)
-        self._NEP_ph, self._NEP_ph_corr = self._channel.photon_NEP(self._elem_power_by_freq)
+        # This is the power emitted by a particular element
+        self._elem_power_by_freq = physics.bb_pow_spec(self._freqs, self._temps, self._emiss)
 
-        self._NEP_read = self._channel.read_NEP(self._opt_power)
-        if self._NEP_read is None:
-            self._NEP_read = np.sqrt((1 + self._channel.read_frac)**2 - 1.)*np.sqrt(self._NEP_bolo**2 + self._NEP_ph**2)
-        self._NEP = np.sqrt(self._NEP_bolo**2 + self._NEP_ph**2 + self._NEP_read**2)
-        self._NEP_corr = np.sqrt(self._NEP_bolo**2 + self._NEP_ph_corr**2 + self._NEP_read**2)
+        # This is the power coming from a particular element getting to the detector as a function of frequency
+        self._elem_power_to_det_by_freq = self._elem_power_by_freq*self._elem_cumul_effic_by_freq
 
-        self._NET = noise.NET_from_NEP(self._NEP, self._freqs, self._chan_effic, self._channel.camera.optical_coupling)
-        self._NET_corr = noise.NET_from_NEP(self._NEP_corr, self._freqs, self._chan_effic, self._channel.camera.optical_coupling)
+        # This is the power coming from up the optical chain getting to a particlar element
+        # Note that we have to pull out the padding here
+        cumul_power_down = 0.
+        cumul_list_down = []
+        for elem_power, elem_trans in zip(self._elem_power_by_freq, self._trans[:-2]):
+            cumul_power_down = cumul_power_down + elem_power
+            cumul_power_down = cumul_power_down * elem_trans
+            cumul_list_down.append(cumul_power_down)
+        self._elem_sky_power_by_freq = np.array(cumul_list_down)
+
+        # These are integrated accross the bands (using np.trapz trapezoid run integration)
+        # Optical power from each element
+        self.elem_power_to_det.set_from_SI(np.trapz(self._elem_power_to_det_by_freq, self._freqs))
+        self.elem_power_from_sky.set_from_SI(np.trapz(self._elem_sky_power_by_freq, self._freqs))
+
+        # Optical efficiency from each element
+        self.elem_effic.set_from_SI(np.trapz(self._trans[1:-1], self._freqs) / self._bandwidth)
+        # Cumulative efficiency for the test of the optical chain, by element
+        self.elem_cumul_effic.set_from_SI(np.trapz(self._elem_cumul_effic_by_freq, self._freqs) / self._bandwidth)
+        # Total channel efficiency
+        self.effic.set_from_SI(np.trapz(self._chan_effic, self._freqs) / self._bandwidth)
+
+        # This is the efficiency of all the telescope elements
+        self._tel_effic = np.trapz(self._elem_cumul_effic_by_freq[NSKY_SRC], self._freqs) / self._bandwidth
+
+        self.opt_power.set_from_SI(np.sum(self.elem_power_to_det.SI, axis=0))
+        self.tel_power.set_from_SI(np.sum(self.elem_power_to_det.SI[NSKY_SRC:], axis=0))
+        self.sky_power.set_from_SI(np.sum(self.elem_power_from_sky.SI[:NSKY_SRC], axis=0))
+
+        self.tel_rj_temp.set_from_SI(physics.rj_temp(self.tel_power.SI, self._bandwidth, self._tel_effic))
+        self.sky_rj_temp.set_from_SI(physics.rj_temp(self.sky_power.SI, self._bandwidth, self._tel_effic))
+
+        self.NEP_bolo.set_from_SI(self._channel.bolo_NEP(self.opt_power.SI))
+        nep_ph, nep_corr = self._channel.photon_NEP(self._elem_power_to_det_by_freq)
+
+        self.NEP_ph.set_from_SI(nep_ph)
+        self.NEP_ph_corr.set_from_SI(nep_corr)
+
+        self.NEP_read.set_from_SI(self._channel.read_NEP(self.opt_power.SI))
+        if self.NEP_read is None or not np.isfinite(self.NEP_read.SI).all():
+            self.NEP_read.set_from_SI(np.sqrt((1 + self._channel.read_frac())**2 - 1.)*np.sqrt(self.NEP_bolo.SI**2 + self.NEP_ph.SI**2))
+        self.NEP.set_from_SI(np.sqrt(self.NEP_bolo.SI**2 + self.NEP_ph.SI**2 + self.NEP_read.SI**2))
+        self.NEP_corr.set_from_SI(np.sqrt(self.NEP_bolo.SI**2 + self.NEP_ph_corr.SI**2 + self.NEP_read.SI**2))
+
+        self.NET.set_from_SI(noise.NET_from_NEP(self.NEP.SI, self._freqs, self._chan_effic, self._channel.camera.optical_coupling()))
+        self.NET_corr.set_from_SI(noise.NET_from_NEP(self.NEP_corr.SI, self._freqs, self._chan_effic, self._channel.camera.optical_coupling()))
 
         self._Trj_over_Tcmb = _Trj_over_Tcmb(self._freqs)
-        self._NET_RJ = self._Trj_over_Tcmb*self._NET
-        self._NET_corr_RJ = self._Trj_over_Tcmb*self._NET_corr
+        self.NET_RJ.set_from_SI(self._Trj_over_Tcmb*self.NET.SI)
+        self.NET_corr_RJ.set_from_SI(self._Trj_over_Tcmb*self.NET_corr.SI)
 
-        self._NET_arr = self._instrument.NET * noise.NET_arr(self._NET, self._channel.ndet, self._channel.Yield)
-        self._NET_arr_RJ = self._instrument.NET * noise.NET_arr(self._NET_RJ, self._channel.ndet, self._channel.Yield)
+        self.NET_arr.set_from_SI(self._instrument.NET() * noise.NET_arr(self.NET.SI, self._channel.ndet, self._channel.Yield()))
+        self.NET_arr_RJ.set_from_SI(self._instrument.NET() * noise.NET_arr(self.NET_RJ.SI, self._channel.ndet, self._channel.Yield()))
 
-        self._corr_fact = self._NET_corr / self._NET
-        self._map_depth = noise.map_depth(self._NET_arr, self._fsky, self._obs_time, self._obs_effic)
-        self._map_depth_RJ = noise.map_depth(self._NET_arr_RJ, self._fsky, self._obs_time, self._obs_effic)
+        self.corr_fact.set_from_SI(self.NET_corr.SI / self.NET.SI)
+        self.map_depth.set_from_SI(noise.map_depth(self.NET_arr.SI, self._fsky, self._obs_time, self._obs_effic))
+        self.map_depth_RJ.set_from_SI(noise.map_depth(self.NET_arr_RJ.SI, self._fsky, self._obs_time, self._obs_effic))
         self.summarize()
+        self.analyze_optical_chain()
 
     def summarize(self):
         """ Compute and cache summary statistics """
         self._summary = odict()
-        for key, prop in self._properties.items():
-            self._summary[key] = prop.summarize(self)
+        for key in self.summary_fields:
+            self._summary[key] = self._properties[key].summarize(self)
         return self._summary
 
+    def analyze_optical_chain(self):
+        """ Compute and cache optical output statistics """
+        self._optical_output = odict()
+        for key in self.optical_output_fields:
+            self._optical_output[key] = self._properties[key].summarize_by_element(self)
+        return self._optical_output
 
     def print_summary(self, stream=sys.stdout):
         """ Print summary statistics in human-readable format """
         for key, val in self._summary.items():
             stream.write("%s : %s\n" % (key.ljust(20), val))
 
+    def print_optical_output(self, stream=sys.stdout):
+        """ Print optical output statistics in human-readable format """
+
+        elem_power_from_sky = self._optical_output['elem_power_from_sky']
+        elem_power_to_det = self._optical_output['elem_power_to_det']
+        elem_effic = self._optical_output['elem_effic']
+        elem_cumul_effic = self._optical_output['elem_cumul_effic']
+        stream.write("%s | %s | %s | %s | %s\n" % ("Element".ljust(20), "Power from Sky [pW]".ljust(26), "Power to Det [pW]".ljust(26), "Efficiency".ljust(26), "Cumul. Effic.".ljust(26)))
+        for idx, elem in enumerate(self._elem_names):
+            stream.write("%s | %s | %s | %s | %s\n" % (elem.ljust(20),
+                                                            elem_power_from_sky.element_string(idx),
+                                                            elem_power_to_det.element_string(idx),
+                                                            elem_effic.element_string(idx),
+                                                            elem_cumul_effic.element_string(idx)))
+
     def make_sims_table(self, name, table_dict):
         """ Make a table with per-simulation parameters """
-        o_dict = odict([(key, prop.__get__(self).flatten()) for key, prop in self._properties.items()])
+        o_dict = odict([(key, self._properties[key].__get__(self).value.flatten()) for key in self.summary_fields])
         try:
             return table_dict.make_datatable(name, o_dict)
         except ValueError as msg:
+            s = "Column shape mismatch: "
             for k, v in o_dict.items():
-                print (k, v.size)
-            raise ValueError(msg)
+                s += "%s %s, " % (k, v.size)
+            raise ValueError(s) from msg
 
 
     def make_sum_table(self, name, table_dict):

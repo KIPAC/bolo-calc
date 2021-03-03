@@ -41,11 +41,11 @@ def calc_photon_NEP(popts, freqs, factors=None):
     popts (list): power from elements in the optical elements [W]
     freqs (list): frequencies of observation [Hz]
     """
-    #popt = np.sum(popts, axis=0)
-    popt = sum([x for x in popts])
+    popt = np.sum(popts, axis=0)
+    #popt = sum([x for x in popts])
     # Don't consider correlations
     if factors is None:
-        popt2 = sum([x*y for x in popts for y in popts])
+        popt2 = popt*popt
         nep = np.sqrt(np.trapz(
             (2. * physics.h * freqs * popt + 2. * popt2), freqs))
         neparr = nep
@@ -201,10 +201,10 @@ class Noise: #pylint: disable=too-many-instance-attributes
         i_stop = np.sqrt(i_stop*self._geo_fact + 1.)
         at_det = False
         factors = []
-        for i in range(len(elems)):
-            if "CMB" in elems[i]:
+        for elem_ in elems:
+            if "CMB" in elem_:
                 factors.append(c_apert)
-            elif elems[i].upper() in self._ap_names:
+            elif elem_.upper() in self._ap_names:
                 factors.append(i_stop)
                 at_det = True
             elif not at_det:

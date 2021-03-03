@@ -301,7 +301,8 @@ def ani_pow_spec(freq, temp, emiss=1.0):
     emiss (float): blackbody emissivity, Defaults to 1.
     """
     #freq, temp, emiss = _check_inputs(freq, [temp, emiss])
-    return emiss * kB * jnp.exp((h * freq)/(kB * temp)) * (h*freq*n_occ(freq, temp) / kB*temp)**2
+    return emiss * kB * jnp.exp((h * freq)/(kB * temp)) * (h*freq*n_occ(freq, temp) / (kB*temp))**2
+
 
 def pow_frac(T1, T2, freqs):
     """ Fractional power between two physical temperatures """
