@@ -16,6 +16,8 @@ class ExampleTestCase(unittest.TestCase):
         dd = yaml.safe_load(open('config/myExample.yaml'))
         dd['sim_config']['config_dir'] = 'config'
         top = bolo.Top(**dd)
+        top.sim_config.ndet_sim = 0
+        top.sim_config.nsky_sim = 0        
         top.run()
         top.instrument.print_summary()
         top.instrument.write_tables('test.fits')
