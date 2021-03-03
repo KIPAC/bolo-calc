@@ -89,6 +89,7 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
 
         self.temps_list = channel.sky_temps + channel.optical_temps + [channel._det_temp]
         self._temps = bcast_list(self.temps_list)
+
         # Buffer both sides of the transmisison array, because we will be taking cumulatimve products that are offset by one
         # (i.e., we want the product of all the elements downstream of a particular element)
         self.trans_list = [0.] + channel.sky_effic + channel.optical_effic + [channel._det_effic] + [1.]

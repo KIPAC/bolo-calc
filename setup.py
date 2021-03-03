@@ -22,5 +22,5 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         ],
-    install_requires=['numpy', 'astropy', 'pyyaml', 'cfgmdl'],
+    install_requires=['numpy', 'astropy', 'pyyaml', 'scipy', 'h5py', 'cfgmdl'],
 )

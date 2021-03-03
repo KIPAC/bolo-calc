@@ -19,23 +19,24 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python {{ matrix.python-version }}
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
-        python-version: {{ matrix.python-version }}
+        python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         python -m pip install pylint pytest pytest-cov
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install -e .	
     - name: Lint with pylint
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        pylint --reports=no --errors-only bolo
+        pylint --reports=no --errors-only python/bolo
         # stp the build if there are a lot of messages
-        pylint --reports=no --fail-under=9.5 bolo
+        pylint --reports=no --fail-under=9.5 python/bolo
         # Exit-zero treats all errors as warnings.
-        pylint --exit-zero bolo
+        pylint --exit-zero python/bolo
     - name: Test with pytest
       run: |
         python -m pytest --cov=bolo --cov-report=xml tests

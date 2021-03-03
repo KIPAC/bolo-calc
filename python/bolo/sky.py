@@ -84,10 +84,10 @@ class Atmosphere(Model):
     @cached(uses=[atm_model_file])
     def cached_model(self):
         """ Cache the Atmosphere model """
+        if is_not_none(self._telescope.custom_atm_file):
+            return CustomAtm(cfg_path(self._telescope.custom_atm_file))
         if is_not_none(self.atm_model_file):
             return AtmModel(cfg_path(self.atm_model_file), self._telescope.site)
-        if is_not_none(self._telescope.atm_file):
-            return CustomAtm(cfg_path(self._telescope.atm_file))
         return None
 
     def sample(self, nsamples):
@@ -95,7 +95,7 @@ class Atmosphere(Model):
         model = self.cached_model
         if isinstance(model, CustomAtm):
             self._sampled_keys = None
-            self._nsamples = 1
+            self._nsamples = nsamples
             return
         self._telescope.pwv.sample(nsamples)
         self._telescope.elevation.sample(nsamples)
@@ -106,20 +106,24 @@ class Atmosphere(Model):
         """ Get sampled temperatures """
         model = self.cached_model
         nfreqs = len(freqs)
+        out_shape = (max(self._nsamples, 1), 1, nfreqs)
         if self._sampled_keys is None:
-            out_shape = (1, 1, nfreqs)
-            return model.temp(freqs).reshape(out_shape)  #pylint: disable=no-member
-        out_shape = (self._nsamples, 1, nfreqs)
+            ones = np.ones((max(self._nsamples, 1), 1, 1))
+            return (ones*model.temp(freqs)).reshape(out_shape) #pylint: disable=no-member
+            #out_shape = (1, 1, nfreqs)
+            #return model.temp(freqs).reshape(out_shape)  #pylint: disable=no-member
         return model.temp(self._sampled_keys, freqs).reshape(out_shape)  #pylint: disable=no-member
 
     def trans(self, freqs):
         """ Get sampled transmission coefs """
         model = self.cached_model
         nfreqs = len(freqs)
+        out_shape = (max(self._nsamples, 1), 1, nfreqs)
         if self._sampled_keys is None:
-            out_shape = (1, 1, nfreqs)
-            return model.trans(freqs).reshape(out_shape)  #pylint: disable=no-member
-        out_shape = (self._nsamples, 1, nfreqs)
+            ones = np.ones((max(self._nsamples, 1), 1, 1))
+            return (ones*model.trans(freqs)).reshape(out_shape) #pylint: disable=no-member
+            #out_shape = (1, 1, nfreqs)
+            #return model.trans(freqs).reshape(out_shape)  #pylint: disable=no-member
         return model.trans(self._sampled_keys, freqs).reshape(out_shape)  #pylint: disable=no-member
 
 

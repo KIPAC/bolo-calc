@@ -17,7 +17,8 @@ class ExampleTestCase(unittest.TestCase):
         dd['sim_config']['config_dir'] = 'config'
         top = bolo.Top(**dd)
         top.sim_config.ndet_sim = 0
-        top.sim_config.nsky_sim = 0        
+        top.sim_config.nsky_sim = 0
+        top.instrument.custom_atm_file = 'Bands/atacama_atm.txt'
         top.run()
         top.instrument.print_summary()
         top.instrument.write_tables('test.fits')
@@ -28,6 +29,7 @@ class ExampleTestCase(unittest.TestCase):
         top = bolo.Top(**dd)
         top.sim_config.ndet_sim = 10
         top.sim_config.nsky_sim = 10
+        top.instrument.custom_atm_file = 'Bands/atacama_atm.txt'        
         top.run()
         top.instrument.print_summary()
         top.instrument.write_tables('test.fits')
