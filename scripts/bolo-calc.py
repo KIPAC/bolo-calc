@@ -21,6 +21,8 @@ def main():
     top = Top(**dd)
     top.run()
     top.instrument.print_summary()
+    top.instrument.print_optical_output()
+
     if args.output:
         top.instrument.write_tables(args.output)
 

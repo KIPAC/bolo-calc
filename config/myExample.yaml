@@ -1,9 +1,10 @@
 sim_config:
-  nsky_sim: 50
-  ndet_sim: 50
+  nsky_sim: 0
+  ndet_sim: 0
   save_summary: True
   save_sim: True
   config_dir: config
+  freq_resol: 1
 
 universe:
   dust:
@@ -38,25 +39,29 @@ instrument:
       scatter_frac: 0.
       spillover: 0.
     elements:
-      primary: { obj_type : Mirror, temperature : 273., absorption : 0.002, spillover : 0.01 }
-      mirror: { obj_type : Mirror, temperature : 273., absorption : 0.002 }
+      primary: { obj_type : Mirror, temperature : 273., absorption : [0.002, 0.005], spillover : 0.01 }
+      mirror: { obj_type : Mirror, temperature : 273., absorption : [0.002, 0.005] }
       window:
         temperature : { var_type : pdf, fname : Pdf/Window_temperature.txt }
-        absorption : 0.005
+        absorption : [0.005, 0.010]
         reflection : { var_type : dist, fname : Bands/Optics/Window_reflection.txt }
-        spillover : 0.02
+        spillover : [0.020, 0.050]
+        spillover_temp : 273.0
         scatter_frac : { var_type : dist, fname : Bands/Optics/Window_scatterFrac.txt }
       IRshader1: { temperature : 291, absorption : 0.001 }
       IRshader2: { temperature : 245., absorption : 0.001 }
       IRshader3: { temperature : 200., absorption : 0.001 }
-      abs_filter: { temperature : 90., absorption : 0.01, reflection : 0.02 }
+      abs_filter: { temperature : 80., absorption : 0.01, reflection : 0.02 }
       low_pass1: { temperature : 40., absorption : 0.01, reflection : 0.05 }
-      lens1: { temperature : 4., absorption : 0.01, reflection : 0.005 }
+      lens1:
+        temperature : 4.
+        absorption : { var_type : pdf, fname : "Pdf/Lens1_absorption_1.txt,Pdf/Lens1_absorption_2.txt" }
+        reflection : 0.005 
       low_pass2: { temperature : 4., absorption : 0.01, reflection : 0.05 }
-      lens2: { temperature : 2., absorption : 0.005, reflection : 0.005 }
+      lens2: { temperature : 2., absorption : [0.005, 0.010], reflection : 0.005 }
       aperture: { obj_type : ApertureStop, absorption: 0., temperature : 2. }
       low_pass3: { temperature : 2., absorption : 0.01, reflection : 0.05 }
-      lens3: { temperature : 2., absorption : 0.005, reflection : 0.005 }
+      lens3: { temperature : 2., absorption : [0.005, 0.010], reflection : 0.005 }
       low_pass4: { temperature : 1.5, absorption : 0.01, reflection : 0.05 }
   channel_default:
     band_center: 100.
@@ -93,13 +98,14 @@ instrument:
         chan_config:
           elements:
             chan_1:
-              band_center: 100.
-              det_eff: { var_type : pdf, fname : Pdf/detEff_1.txt }
+              band_center: 90.
+              fractional_bandwidth: .444
+              #det_eff: { var_type : pdf, fname : Pdf/detEff_1.txt }
               band_response : { var_type : dist, fname : Bands/Cam_1.txt }
               read_frac: 0.1              
             chan_2:
               band_center: 150.
-              fractional_bandwidth: .35    
+              fractional_bandwidth: .40   
               response_factor: 1.41
               det_eff: { var_type : pdf, fname : Pdf/detEff_2.txt }              
               squid_nei: { var_type : pdf, fname : Pdf/squidNEI_2.txt }
@@ -110,13 +116,14 @@ instrument:
         chan_config:
           elements:
             chan_1:
-              band_center: 100.
-              det_eff: { var_type : pdf, fname : Pdf/detEff_1.txt }
+              band_center: 95.
+              fractional_bandwidth: .52
+              #det_eff: { var_type : pdf, fname : Pdf/detEff_1.txt }
               band_response : { var_type : dist, fname : Bands/Cam_1.txt }
               read_frac: 0.1              
             chan_2:
               band_center: 150.
-              fractional_bandwidth: .35    
+              fractional_bandwidth: .40   
               response_factor: 1.41
               det_eff: { var_type : pdf, fname : Pdf/detEff_2.txt }              
               squid_nei: { var_type : pdf, fname : Pdf/squidNEI_2.txt }

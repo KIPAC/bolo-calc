@@ -4,7 +4,7 @@ from collections import OrderedDict as odict
 
 import numpy as np
 
-from cfgmdl import Property, Parameter, Model
+from cfgmdl import Parameter, Model
 from cfgmdl.tools import build_class
 from cfgmdl.utils import is_not_none
 
@@ -83,7 +83,7 @@ class OpticalElement(Model):
         """ Sample input parameters for a given channel """
         self.temperature.sample(nsample)
         results_ = ChannelResults()
-        results_.temp = self.temperature()
+        results_.temp = self.temperature.SI
         results_.refl = self.reflection.sample(nsample, freqs, chan_idx)
         results_.spil = self.spillover.sample(nsample, freqs, chan_idx)
         if is_not_none(self.surface_rough) and np.isfinite(self.surface_rough()).all():
@@ -111,7 +111,7 @@ class OpticalElement(Model):
 
     def calc_abso(self, channel, freqs, nsample):
         """ Compute the absorption for a given channel """
-        return self._absorption.sample(nsample, freqs, channel.idx)
+        return self.absorption.sample(nsample, freqs, channel.idx)
 
 
 class Mirror(OpticalElement):
@@ -148,8 +148,9 @@ class ApertureStop(OpticalElement):
         pixel_size = channel.pixel_size()
         f_number = channel.camera.f_number()
         waist_factor = channel.waist_factor()
+
         if is_not_none(pixel_size) and is_not_none(f_number) and is_not_none(waist_factor):
-            return physics.spill_eff(np.array(freqs), pixel_size, f_number, waist_factor)
+            return 1. - physics.spill_eff(np.array(freqs), pixel_size, f_number, waist_factor)
         return super(ApertureStop, self).calc_abso(channel, freqs, nsample)
 
 

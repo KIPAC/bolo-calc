@@ -97,9 +97,9 @@ class Atmosphere(Model):
             self._sampled_keys = None
             self._nsamples = 1
             return
-        self._telescope._pwv.sample(nsamples)
-        self._telescope._elevation.sample(nsamples)
-        self._sampled_keys = model.get_keys(1e-6*np.atleast_1d(self._telescope.pwv()), np.atleast_1d(self._telescope.elevation()))
+        self._telescope.pwv.sample(nsamples)
+        self._telescope.elevation.sample(nsamples)
+        self._sampled_keys = model.get_keys(1e-6*np.atleast_1d(self._telescope.pwv()), np.atleast_1d(self._telescope.elevation())) #pylint: disable=no-member
         self._nsamples = max(nsamples, 1)
 
     def temp(self, freqs):
@@ -108,9 +108,9 @@ class Atmosphere(Model):
         nfreqs = len(freqs)
         if self._sampled_keys is None:
             out_shape = (1, 1, nfreqs)
-            return model.temp(freqs).reshape(out_shape)
+            return model.temp(freqs).reshape(out_shape)  #pylint: disable=no-member
         out_shape = (self._nsamples, 1, nfreqs)
-        return model.temp(self._sampled_keys, freqs).reshape(out_shape)
+        return model.temp(self._sampled_keys, freqs).reshape(out_shape)  #pylint: disable=no-member
 
     def trans(self, freqs):
         """ Get sampled transmission coefs """
@@ -118,9 +118,9 @@ class Atmosphere(Model):
         nfreqs = len(freqs)
         if self._sampled_keys is None:
             out_shape = (1, 1, nfreqs)
-            return model.trans(freqs).reshape(out_shape)
+            return model.trans(freqs).reshape(out_shape)  #pylint: disable=no-member
         out_shape = (self._nsamples, 1, nfreqs)
-        return model.trans(self._sampled_keys, freqs).reshape(out_shape)
+        return model.trans(self._sampled_keys, freqs).reshape(out_shape)  #pylint: disable=no-member
 
 
 class Foreground(Model):
@@ -151,8 +151,8 @@ class Dust(Foreground):
         self.amplitude.sample(nsamples)
         self.scale_temperature.sample(nsamples)
 
-        self.amp = np.expand_dims(np.expand_dims(self.amplitude(), -1), -1)
-        self.scale_temp = np.expand_dims(np.expand_dims(self.scale_temperature(), -1), -1)
+        self.amp = np.expand_dims(np.expand_dims(self.amplitude.SI, -1), -1)
+        self.scale_temp = np.expand_dims(np.expand_dims(self.scale_temperature.SI, -1), -1)
         self._nsamples = max(self.amp.size, self.scale_temp.size)
 
     def temp(self, freqs):
@@ -183,8 +183,7 @@ class Dust(Foreground):
             spec_scale = 1.
         # Convert [W/(m^2 sr Hz)] to brightness temperature [K_RJ]
         pow_spec_rad = amp * freq_scale * spec_scale
-        # FIXME
-        return physics.Tb_from_spec_rad(1e6*freqs, pow_spec_rad)/1e6
+        return physics.Tb_from_spec_rad(freqs, pow_spec_rad)
 
 
 class Synchrotron(Foreground):
@@ -202,7 +201,7 @@ class Synchrotron(Foreground):
     def sample(self, nsamples):
         """ Sample this component """
         self.amplitude.sample(nsamples)
-        self.amp = np.expand_dims(np.expand_dims(self.amplitude(), -1), -1)
+        self.amp = np.expand_dims(np.expand_dims(self.amplitude.SI, -1), -1)
         self._nsamples = self.amp.size
 
     def temp(self, freqs):

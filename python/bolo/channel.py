@@ -4,9 +4,8 @@ import numpy as np
 
 from cfgmdl import Property, Parameter, Model
 
-from .utils import is_not_none, is_none
-#from . import physics, noise
-from . import noise
+from .utils import is_not_none
+from . import physics, noise
 from .sky import Universe
 #from .unit import Unit
 from .cfg import Variable
@@ -59,6 +58,9 @@ class Channel(Model):  #pylint: disable=too-many-instance-attributes
         self._idx = None
         super(Channel, self).__init__(**kwargs)
         self._freqs = None
+        self._flo = None
+        self._fhi = None
+        self._freq_mask = None
         self.bandwidth = None
 
     def set_camera(self, camera, idx):
@@ -83,6 +85,16 @@ class Channel(Model):  #pylint: disable=too-many-instance-attributes
         return self._freqs
 
     @property
+    def flo(self):
+        """ Return the -3dB point"""
+        return self._flo
+
+    @property
+    def fhi(self):
+        """ Return the +3dB point """
+        return self._fhi
+
+    @property
     def ndet(self):
         """ Return the total number of detectors per channel """
         return self.num_det_per_water*self.num_wafer_per_optics_tube*self.num_optics_tube
@@ -95,59 +107,69 @@ class Channel(Model):  #pylint: disable=too-many-instance-attributes
     def photon_NEP(self, elem_power):
         """ Return the photon NEP given the power in the element in the optical chain """
         #wave_number = self.pixel_size / self.camera.f_number * physics.lamb(self.band_center)
-        return noise.calc_photon_NEP(elem_power, self._freqs)
+        val =  noise.calc_photon_NEP(elem_power, self._freqs)
+        return val
 
     def bolo_NEP(self, opt_pow):
         """ Return the bolometric NEP given the detector details """
         tb = self._camera.bath_temperature()
         tc = self.Tc()
         n = 1. #self.n
-        if is_not_none(self.G) and np.isfinite(self.G()).all():
+        if is_not_none(self.G) and np.isfinite(self.G.SI).all():
             g = self.G()
         else:
-            if is_not_none(self.psat_factor) and np.isfinite(self.psat_factor()):
-                p_sat = opt_pow * self.psat_factor()
+            if is_not_none(self.psat_factor) and np.isfinite(self.psat_factor.SI):
+                p_sat = opt_pow * self.psat_factor.SI
             else:
-                p_sat = self.psat()
+                p_sat = self.psat.SI
             g = noise.G(p_sat, n, tb, tc)
-        if is_not_none(self.Flink) and np.isfinite(self.Flink()):
-            flink = self.Flink()
+        if is_not_none(self.Flink) and np.isfinite(self.Flink.SI):
+            flink = self.Flink.SI
         else:
             flink = noise.Flink(n, tb, tc)
         return noise.bolo_NEP(flink, g, tc)
 
     def read_NEP(self, opt_pow):
         """ Return the readout NEP given the detector details """
-        if np.isnan(self.squid_nei()).any():
+        if np.isnan(self.squid_nei.SI).any():
             return None
-        if np.isnan(self.bolo_resistance()).any():
+        if np.isnan(self.bolo_resistance.SI).any():
             return None
-        if is_not_none(self.psat) and np.isfinite(self.psat()).all():
-            p_stat = self.psat()
+        if is_not_none(self.psat) and np.isfinite(self.psat.SI).all():
+            p_stat = self.psat.SI
         else:
-            p_stat = self.psat_factor() * opt_pow
+            p_stat = self.psat_factor.SI * opt_pow
         p_bias = (p_stat - opt_pow).clip(0, np.inf)
-        if is_not_none(self.response_factor) and np.isfinite(self.response_factor()).all():
-            s_fact = self.response_factor()
+        if is_not_none(self.response_factor) and np.isfinite(self.response_factor.SI).all():
+            s_fact = self.response_factor.SI
         else:
-            s_fact = 1.        
-        return noise.read_NEP(p_bias, self.bolo_resistance().T, self.squid_nei().T, s_fact)
+            s_fact = 1.
+        return noise.read_NEP(p_bias, self.bolo_resistance.SI.T, self.squid_nei.SI.T, s_fact)
 
     def compute_evaluation_freqs(self, freq_resol=None):
         """ Compute and return the evaluation frequencies """
         self.bandwidth = self.band_center() * self.fractional_bandwidth()
         if freq_resol is None:
-            freq_resol = 0.25*self.bandwidth
+            freq_resol = 0.05*self.bandwidth
         else:
-            freq_resol = freq_resol * self.band_center()
-        fmin = self.band_center() - 0.5*self.bandwidth
-        fmax = self.band_center() + 0.5*self.bandwidth
+            freq_resol = freq_resol * 1e9
+        self._flo = self.band_center() - 0.5*self.bandwidth
+        self._fhi = self.band_center() + 0.5*self.bandwidth
         freq_step = np.ceil(self.bandwidth/freq_resol).astype(int)
-        return np.linspace(fmin, fmax, freq_step+1)
+
+        self._freqs = np.linspace(self._flo, self._fhi, freq_step+1)
+        band_mean_response = self.band_response.sample(0, self._freqs)
+        if np.isscalar(band_mean_response):
+            return self._freqs
+        self._flo, self._fhi = physics.band_edges(self._freqs, band_mean_response)
+        self.bandwidth = self._fhi - self._flo
+        freq_mask = np.bitwise_and(self._freqs >= self._flo, self._freqs <= self._fhi)
+        self._freqs = self._freqs[freq_mask]
+        return self._freqs
 
     def eval_optical_chain(self, nsample=0, freq_resol=None):
         """ Evaluate the performance of the optical chain for this channel """
-        self._freqs = self.compute_evaluation_freqs(freq_resol)
+        self.compute_evaluation_freqs(freq_resol)
         self._optical_effic = []
         self._optical_emiss = []
         self._optical_temps = []
@@ -163,7 +185,7 @@ class Channel(Model):  #pylint: disable=too-many-instance-attributes
         self.band_response.sample(nsample, self._freqs)
         self.det_eff.sample(nsample)
         #def_eff_shaped = np.expand_dims(self.det_eff(), -1)
-        self._det_effic = self.band_response() * self.det_eff()
+        self._det_effic = self.band_response.SI * self.det_eff.SI
         self._det_emiss = 0.
         self._det_temp = self._camera.bath_temperature()
 
@@ -190,6 +212,11 @@ class Channel(Model):  #pylint: disable=too-many-instance-attributes
     def optical_temps(self):
         """ Return the optical element temperatures for this channel """
         return self._optical_temps
+
+    @property
+    def sky_names(self):
+        """ Return the list of the names of the sky components """
+        return list(self._sky_temp_dict.keys())
 
     @property
     def sky_temps(self):

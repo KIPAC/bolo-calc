@@ -19,10 +19,11 @@ class VariableHolder(ParamHolder):
     """ Allows parameter values to be interpolated using a frequency repsonse file"""
 
     fname = Property(dtype=str, default=None, help="Data file")
-    var_type = Choice(choices=['pdf', 'dist', 'gauss', 'const'], default='const')                          
-    
+    var_type = Choice(choices=['pdf', 'dist', 'gauss', 'const'], default='const')
+
     def __init__(self, *args, **kwargs):
         """ Constuctor """
+        self._value = None
         super(VariableHolder, self).__init__(*args, **kwargs)
         self._sampled_values = None
         self._cached_interps = None
@@ -41,7 +42,7 @@ class VariableHolder(ParamHolder):
             return arr[0]
         return arr[chan_idx]
 
-    def _cache_interps(self):
+    def _cache_interps(self, freqs=None):
         """ Cache the interpolator object """
         if self.var_type == 'const':
             self._cached_interps = None
@@ -50,7 +51,7 @@ class VariableHolder(ParamHolder):
             if np.isnan(self.errors).any():
                 self._cached_interps = None
                 return
-            
+
             self._cached_interps = np.array([ sps.norm(loc=val_, scale=sca_) for val_, sca_ in zip(np.atleast_1d(self.value), np.atleast_1d(self.errors))])
             return
         tokens = self.fname.split(',')
@@ -58,16 +59,20 @@ class VariableHolder(ParamHolder):
             self._cached_interps = np.array([ChoiceDist(cfg_path(token)) for token in tokens])
             self._value = np.array([ pdf.mean() for pdf in self._cached_interps ])
             return
-        self._cached_interps = np.array([FreqIntrep(cfg_path(token)) for token in tokens])            
-        self._value = np.array([ pdf.mean_trans() for pdf in self._cached_interps ])
-        
+        self._cached_interps = np.array([FreqIntrep(cfg_path(token)) for token in tokens])
+        if freqs is None:
+            self._value = np.array([ pdf.mean_trans() for pdf in self._cached_interps ])
+            return
+        self._value = np.array([ pdf.rvs(freqs) for pdf in self._cached_interps ])
+
+
     def rvs(self, nsamples, freqs=None, chan_idx=0):
         """ Sample values
 
         This just returns the sampled values.
         It does not store them.
         """
-        self._cache_interps()        
+        self._cache_interps(freqs)
         val = self._channel_value(self.value, chan_idx)
         if self._cached_interps is None or not nsamples:
             return val
@@ -77,7 +82,7 @@ class VariableHolder(ParamHolder):
         if self.var_type == 'pdf':
             return interp.rvs(nsamples).reshape((nsamples, 1))
         return interp.rvs(freqs, nsamples).reshape((nsamples, len(freqs)))
-    
+
     def sample(self, nsamples, freqs=None, chan_idx=0):
         """ Sample values
 
@@ -134,9 +139,13 @@ class StatsSummary:
         self._quantiles = np.quantile(vals, [0.023, 0.159, 0.841, 0.977], axis=axis)
         self._deltas = np.abs(self._quantiles - self._median)
 
+    def element_string(self, idx):
+        """ A pretty represenation of the stats for one element """
+        return "%0.4f +- [%0.4f %0.4f] %s" % (self._mean[idx], self._deltas[1,idx], self._deltas[2,idx], self._unit_name)
+
     def __str__(self):
         """ A pretty represenation of the stats """
-        return "%.3g +- [%.3g %.3g] %s" % (self._mean, self._deltas[1], self._deltas[2], self._unit_name)
+        return "%0.4f +- [%0.4f %0.4f] %s" % (self._mean, self._deltas[1], self._deltas[2], self._unit_name)
 
     def todict(self):
         """ Put the summary stats into a dictionary """
@@ -157,9 +166,17 @@ class Output(Parameter):
     """
 
     outname = Property(dtype=str, default=None)
-    
+
     def summarize(self, obj):
         """ Compute and return the summary statistics """
         unit_name = ""
-        val = getattr(obj, self.private_name).from_SI
+        val = getattr(obj, self.private_name).value
         return StatsSummary(self.public_name, val, unit_name)
+
+
+    def summarize_by_element(self, obj):
+        """ Compute and return the summary statistics """
+        unit_name = ""
+        val = getattr(obj, self.private_name).value
+        val = val.reshape((val.shape[0], np.product(val.shape[1:])))
+        return StatsSummary(self.public_name, val, unit_name, axis=1)

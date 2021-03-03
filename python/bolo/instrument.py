@@ -50,7 +50,7 @@ class Instrument(Model):
     def eval_sky(self, universe, nsamples=0, freq_resol=None):
         """ Sample requested inputs and evaluate the parameters of the sky model """
         universe.sample(nsamples)
-        self._obs_effic.sample(nsamples)
+        self.obs_effic.sample(nsamples)
         for camera in self.cameras.values():
             camera.eval_sky(universe, freq_resol)
 
@@ -91,13 +91,20 @@ class Instrument(Model):
     @property
     def tables(self):
         """ Get the out put data tables"""
-        return self._tables 
-            
+        return self._tables
+
     def print_summary(self, stream=sys.stdout):
         """ Print summary stats in humman readable format """
         for key, val in self._sns_dict.items():
             stream.write("%s ---------\n" % key)
             val.print_summary(stream)
+            stream.write("---------\n")
+
+    def print_optical_output(self, stream=sys.stdout):
+        """ Print summary stats in humman readable format """
+        for key, val in self._sns_dict.items():
+            stream.write("%s ---------\n" % key)
+            val.print_optical_output(stream)
             stream.write("---------\n")
 
     def run(self, universe, sim_cfg, basename=""):
