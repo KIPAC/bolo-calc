@@ -12,7 +12,7 @@ from cfgmdl import Property, Parameter, ParamHolder, Choice
 from cfgmdl.utils import is_none, defaults_decorator
 
 from .pdf import ChoiceDist
-from .interp import FreqIntrep
+from .interp import FreqInterp
 from .utils import cfg_path
 
 class VariableHolder(ParamHolder):
@@ -59,7 +59,7 @@ class VariableHolder(ParamHolder):
             self._cached_interps = np.array([ChoiceDist(cfg_path(token)) for token in tokens])
             self._value = np.array([ pdf.mean() for pdf in self._cached_interps ])
             return
-        self._cached_interps = np.array([FreqIntrep(cfg_path(token)) for token in tokens])
+        self._cached_interps = np.array([FreqInterp(cfg_path(token)) for token in tokens])
         if freqs is None:
             self._value = np.array([ pdf.mean_trans() for pdf in self._cached_interps ])
             return
@@ -151,9 +151,9 @@ class StatsSummary:
         """ Put the summary stats into a dictionary """
         o_dict = odict()
         for vn in ['_mean', '_median', '_std']:
-            o_dict["%s%s" % (self._name, vn)] = [self.__dict__[vn]]
+            o_dict["%s%s" % (self._name, vn)] = np.atleast_1d(self.__dict__[vn])
         for idx, vn in enumerate(['_n_2_sig', '_n_1_sig', '_p_1_sig', '_p_2_sig']):
-            o_dict["%s%s" % (self._name, vn)] = [self._quantiles[idx]]
+            o_dict["%s%s" % (self._name, vn)] = np.atleast_1d(self._deltas[idx])
         return o_dict
 
 

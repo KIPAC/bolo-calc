@@ -10,7 +10,7 @@ from cfgmdl.utils import is_none
 from .utils import read_txt_to_np
 
 
-class FreqIntrep:
+class FreqInterp:
     """
     Interpolates quantities vs frequency, with errrors
     for detectors and optics

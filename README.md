@@ -33,9 +33,10 @@ Running script (from top-level bolo-calc directory)
 scripts/bolo-calc.py -i config/myExample.yaml -o test.fits
 ```
 
-Running jupyter notebook (from top-level bolo-calc directory)
+Running jupyter notebooks (from top-level bolo-calc directory)
 ```
-jupyter-notebook nb/bolo_example.ipynb
+jupyter-notebook nb/bolo_example.ipynb  # run this one first
+jupyter-notebook nb/tables_example.ipynb
 ```
 
 

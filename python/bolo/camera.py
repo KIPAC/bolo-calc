@@ -27,13 +27,15 @@ class Camera_Base(Model):
         self.channels = odict()
         self.optics = None
         self._instrument = None
+        self.name = None
         for key, val in self.__dict__.items():
             if isinstance(val, Channel):
                 self.channels[key] = val
 
-    def set_parent(self, instrument):
+    def set_parent(self, instrument, name):
         """ Pass information from the parent instrument down the food chain """
         self._instrument = instrument
+        self.name = name
         self.optics = odict()
         for key, val in instrument.optics.elements.items():
             if key[1:] in self.skip_optical_elements:
