@@ -12,6 +12,7 @@ class SimConfig(Model):
     ndet_sim = Property(dtype=int, default=0)
     save_summary = Property(dtype=bool, default=True)
     save_sim = Property(dtype=bool, default=True)
+    save_optical = Property(dtype=bool, default=True)
     freq_resol = Property(dtype=float, default=None)
     config_dir = Property(dtype=str, default="../config")
 
