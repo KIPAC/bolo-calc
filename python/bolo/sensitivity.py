@@ -78,6 +78,7 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
         self._channel = channel
         self._camera = self._channel.camera
         self._instrument = self._camera.instrument
+        self._channel_name = "%s_%i" % (self._camera.name, self._channel.idx)
         self._summary = None
         self._optical_output = None
 
@@ -226,20 +227,30 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
                 s += "%s %s, " % (k, v.size)
             raise ValueError(s) from msg
 
+    def make_optical_table(self, name, table_dict):
+        """ Make a table with optical output parameters """
+        o_dict = odict()
+        for val in self._optical_output.values():
+            o_dict.update(val.todict())
+        o_dict['element'] = np.array(self._elem_names)
+        o_dict['channel'] = np.array([self._channel_name]*len(self._elem_names))
+        return table_dict.make_datatable(name, o_dict)
 
     def make_sum_table(self, name, table_dict):
         """ Make a table with summary parameters """
         o_dict = odict()
         for val in self._summary.values():
             o_dict.update(val.todict())
-
+        o_dict['channel'] = np.array([self._channel_name])
         return table_dict.make_datatable(name, o_dict)
 
 
-    def make_tables(self, base_name, table_dict, save_summary, save_sim):
+    def make_tables(self, base_name, table_dict, **kwargs):
         """ Make output tables """
-        if save_sim:
+        if kwargs.get('save_sim', True):
             self.make_sims_table("%s_sims" % base_name, table_dict)
-        if save_summary:
+        if kwargs.get('save_summary', True):
             self.make_sum_table("%s_summary" % base_name, table_dict)
+        if kwargs.get('save_optical', True):
+            self.make_optical_table("%s_optical" % base_name, table_dict)
         return table_dict
