@@ -46,23 +46,19 @@ def calc_photon_NEP(popts, freqs, factors=None):
     # Don't consider correlations
     if factors is None:
         popt2 = popt*popt
-        nep = np.sqrt(np.trapz(
-            (2. * physics.h * freqs * popt + 2. * popt2), freqs))
+        nep = np.sqrt(np.trapz((2. * physics.h * freqs * popt + 2. * popt2), freqs))
         neparr = nep
         return nep, neparr
-    # Consider correlations
-    return np.zeros(popt.shape), np.zeros(popt.shape)
-    #popt2 = sum([popts[i] * popts[j]
-    #             for i in range(len(popts))
-    #             for j in range(len(popts))])
-    #popt2arr = sum([factors[i] * factors[j] * popts[i] * popts[j]
-    #                for i in range(len(popts))
-    #                for j in range(len(popts))])
-    #nep = np.sqrt(np.trapz(
-    #    (2. * physics.h * freqs * popt + 2. * popt2), freqs))
-    #neparr = np.sqrt(np.trapz(
-    #    (2. * physics.h * freqs * popt + 2. * popt2arr), freqs))
-    #return nep, neparr
+
+    popt2 = sum([popts[i] * popts[j]
+                 for i in range(len(popts))
+                     for j in range(len(popts))])
+    popt2arr = sum([factors[i] * factors[j] * popts[i] * popts[j]
+                        for i in range(len(popts))
+                        for j in range(len(popts))])
+    nep = np.sqrt(np.trapz((2. * physics.h * freqs * popt + 2. * popt2), freqs))
+    neparr = np.sqrt(np.trapz((2. * physics.h * freqs * popt + 2. * popt2arr), freqs))
+    return nep, neparr
 
 def bolo_NEP(flink, G_val, Tc):
     """
@@ -155,7 +151,7 @@ class Noise: #pylint: disable=too-many-instance-attributes
 
         # Correlation files
         corr_dir = os.path.join(
-            os.path.split(__file__)[0], "detCorrFiles", "PKL")
+            os.path.split(__file__)[0], "PKL")
         self._p_c_apert, self._c_apert = pk.load(io.open(
             os.path.join(corr_dir, "coherentApertCorr.pkl"), "rb"),
                             encoding="latin1")
@@ -174,7 +170,7 @@ class Noise: #pylint: disable=too-many-instance-attributes
         # Geometric pitch factor
         self._geo_fact = 6  # Hex packing
 
-    def corr_facts(self, elems, det_pitch, flamb_max=3.):
+    def corr_facts(self, elems, det_pitch, ap_names, flamb_max=3.):
         """
         Calculate the Bose white-noise correlation factor
 
@@ -186,6 +182,8 @@ class Noise: #pylint: disable=too-many-instance-attributes
         Default is 3.
         """
         ndets = int(round(flamb_max / (det_pitch), 0))
+        #import pdb
+        #pdb.set_trace()
         inds1 = [np.argmin(abs(np.array(self._det_p) -
                  det_pitch * (n + 1)))
                  for n in range(ndets)]
@@ -193,28 +191,24 @@ class Noise: #pylint: disable=too-many-instance-attributes
                  det_pitch * (n + 1) * np.sqrt(3.)))
                  for n in range(ndets)]
         inds = np.sort(inds1 + inds2)
-        c_apert = np.sum([abs(self._c_apert)[ind] for ind in inds])
-        i_apert = np.sum([abs(self._c_apert)[ind] for ind in inds])
-        i_stop = np.sum([abs(self._c_stop)[ind] for ind in inds])
-        c_apert = np.sqrt(c_apert*self._geo_fact + 1.)
-        i_apert = np.sqrt(i_apert*self._geo_fact + 1.)
-        i_stop = np.sqrt(i_stop*self._geo_fact + 1.)
         at_det = False
         factors = []
         for elem_ in elems:
-            if "CMB" in elem_:
-                factors.append(c_apert)
-            elif elem_.upper() in self._ap_names:
-                factors.append(i_stop)
-                at_det = True
-            elif not at_det:
-                factors.append(i_apert)
-            else:
+            if at_det:
                 factors.append(1.)
-        # return np.array(factors[:-1])
+                continue
+            if "CMB" in elem_:
+                use_abs = abs(self._c_apert)
+            elif elem_ in ap_names:
+                use_abs = abs(self._i_stop)
+                at_det = True
+            else:
+                use_abs = abs(self._i_apert)
+            factors.append(np.sqrt(1. + self._geo_fact*(np.sum([use_abs[ind] for ind in inds]))))
+
         return np.array(factors)
 
-    def photon_NEP(self, popts, freqs, elems=None, det_pitch=None):
+    def photon_NEP(self, popts, freqs, **kwargs):
         """
         Calculate photon NEP [W/rtHz] for a detector
 
@@ -226,8 +220,11 @@ class Noise: #pylint: disable=too-many-instance-attributes
         """
         #popt = sum([x for x in popts])
         # Don't consider correlations
-        if elems is None and det_pitch is None:
+        elems = kwargs.get('elems', None)
+        det_pitch = kwargs.get('det_pitch', None)
+        ap_names = kwargs.get('ap_names', None)
+        if elems is None or det_pitch is None:
             factors = None
         else:
-            factors = self.corr_facts(elems, det_pitch)
+            factors = self.corr_facts(elems, det_pitch, ap_names)
         return calc_photon_NEP(popts, freqs, factors)

@@ -3,21 +3,21 @@
 from collections import OrderedDict as odict
 
 
-from cfgmdl import Property, Parameter, Model
+from cfgmdl import Property, Model
 from cfgmdl.tools import build_class
 from cfgmdl.utils import expand_dict
 
 from .channel import Channel
-
+from .cfg import Variable
 
 class Camera_Base(Model):
     """
     Camera model
     """
-    boresite_elevation = Parameter(default=0.)
-    optical_coupling = Parameter(default=1.)
-    f_number = Parameter(default=2.5)
-    bath_temperature = Parameter(default=0.1)
+    boresite_elevation = Variable(default=0.)
+    optical_coupling = Variable(default=1.)
+    f_number = Variable(default=2.5)
+    bath_temperature = Variable(default=0.1)
     skip_optical_elements = Property(dtype=list)
     chan_config = Property(dtype=dict, help="Configuation for channels")
 

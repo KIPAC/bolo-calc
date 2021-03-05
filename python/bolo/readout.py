@@ -1,13 +1,14 @@
 """ Instrument readout model """
 
-from cfgmdl import Model, Parameter
+from cfgmdl import Model
+from .cfg import Variable
 
 class Readout(Model):
     """
     Instrument readout model
     """
-    squid_nei = Parameter()
-    read_noise_frac = Parameter(default=0.1)
-    dwell_time = Parameter()
-    revisit_rate = Parameter()
-    nyquist_inductance = Parameter()
+    squid_nei = Variable()
+    read_noise_frac = Variable(default=0.1)
+    dwell_time = Variable()
+    revisit_rate = Variable()
+    nyquist_inductance = Variable()

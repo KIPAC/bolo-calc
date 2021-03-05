@@ -69,7 +69,6 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
 
     optical_output_fields = ['elem_effic', 'elem_cumul_effic', 'elem_power_from_sky', 'elem_power_to_det']
 
-
     def __init__(self, channel):
         """ Constructor """
 
@@ -99,6 +98,8 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
         self._emiss = bcast_list(self.emiss_list)
 
         self._elem_names = channel.sky_names + list(self._camera.optics.keys()) + ['detector']
+        self._ap_names = list(self._instrument.optics.apertureStops.keys())
+
 
         # Fix the shapes of the arrays to match
         if len(self._emiss.shape) == 2:
@@ -132,7 +133,7 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
             cumul_list_down.append(cumul_power_down)
         self._elem_sky_power_by_freq = np.array(cumul_list_down)
 
-        # These are integrated accross the bands (using np.trapz trapezoid run integration)
+        # These are integrated accross the bands (using np.trapz to do trapezoid rule integration)
         # Optical power from each element
         self.elem_power_to_det.set_from_SI(np.trapz(self._elem_power_to_det_by_freq, self._freqs))
         self.elem_power_from_sky.set_from_SI(np.trapz(self._elem_sky_power_by_freq, self._freqs))
@@ -147,6 +148,7 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
         # This is the efficiency of all the telescope elements
         self._tel_effic = np.trapz(self._elem_cumul_effic_by_freq[NSKY_SRC], self._freqs) / self._bandwidth
 
+        # From this point, all everything is intergrated across bands and given by channel
         self.opt_power.set_from_SI(np.sum(self.elem_power_to_det.SI, axis=0))
         self.tel_power.set_from_SI(np.sum(self.elem_power_to_det.SI[NSKY_SRC:], axis=0))
         self.sky_power.set_from_SI(np.sum(self.elem_power_from_sky.SI[:NSKY_SRC], axis=0))
@@ -155,10 +157,11 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
         self.sky_rj_temp.set_from_SI(physics.rj_temp(self.sky_power.SI, self._bandwidth, self._tel_effic))
 
         self.NEP_bolo.set_from_SI(self._channel.bolo_NEP(self.opt_power.SI))
-        nep_ph, nep_corr = self._channel.photon_NEP(self._elem_power_to_det_by_freq)
 
-        self.NEP_ph.set_from_SI(nep_ph)
-        self.NEP_ph_corr.set_from_SI(nep_corr)
+        nep_np, nep_ph_corr = self._channel.photon_NEP(self._elem_power_to_det_by_freq, self._elem_names, self._ap_names)
+        self.NEP_ph.set_from_SI(nep_np)
+
+        self.NEP_ph_corr.set_from_SI(nep_ph_corr)
 
         self.NEP_read.set_from_SI(self._channel.read_NEP(self.opt_power.SI))
         if self.NEP_read is None or not np.isfinite(self.NEP_read.SI).all():

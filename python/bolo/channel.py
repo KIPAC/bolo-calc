@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from cfgmdl import Property, Parameter, Model
+from cfgmdl import Property, Model
 
 from .utils import is_not_none
 from . import physics, noise
@@ -15,34 +15,36 @@ class Channel(Model):  #pylint: disable=too-many-instance-attributes
 
     _min_tc_tb_diff = 0.010
 
-    band_center = Parameter(unit="GHz")
-    fractional_bandwidth = Parameter(default=.35)
+    band_center = Variable(unit="GHz")
+    fractional_bandwidth = Variable(default=.35)
     band_response = Variable(default=1.)
 
     det_eff = Variable(default=1.)
     squid_nei = Variable(default=1., unit='pA/rtHz')
     bolo_resistance = Variable(default=1., unit='Ohm')
 
-    pixel_size = Parameter(default=6.8, unit='mm')
-    waist_factor = Parameter(default=3.)
+    pixel_size = Variable(default=6.8, unit='mm')
+    waist_factor = Variable(default=3.)
 
-    Tc = Parameter(default=.165, unit='K')
-    Tc_fraction = Parameter()
+    Tc = Variable(default=.165, unit='K')
+    Tc_fraction = Variable()
 
     num_det_per_water = Property(dtype=int, default=542)
     num_wafer_per_optics_tube = Property(dtype=int, default=1)
     num_optics_tube = Property(dtype=int, default=3)
 
-    psat = Parameter()
-    psat_factor = Parameter(default=3.)
+    psat = Variable()
+    psat_factor = Variable(default=3.)
 
-    read_frac = Parameter(default=0.1)
-    carrier_index = Parameter(default=3)
-    G = Parameter(unit='pW/K')
-    Flink = Parameter()
-    Yield = Parameter()
-    response_factor = Parameter()
-    nyquist_inductance = Parameter()
+    read_frac = Variable(default=0.1)
+    carrier_index = Variable(default=3)
+    G = Variable(unit='pW/K')
+    Flink = Variable()
+    Yield = Variable()
+    response_factor = Variable()
+    nyquist_inductance = Variable()
+
+    noise_calc = noise.Noise()
 
     def __init__(self, **kwargs):
         """ Constructor """
@@ -104,11 +106,12 @@ class Channel(Model):  #pylint: disable=too-many-instance-attributes
         """ Return the channel index """
         return self._idx
 
-    def photon_NEP(self, elem_power):
+    def photon_NEP(self, elem_power, elems=None, ap_names=None):
         """ Return the photon NEP given the power in the element in the optical chain """
-        #wave_number = self.pixel_size / self.camera.f_number * physics.lamb(self.band_center)
-        val =  noise.calc_photon_NEP(elem_power, self._freqs)
-        return val
+        if elems is None:
+            return self.noise_calc.photon_NEP(elem_power, self._freqs)
+        det_pitch = self.pixel_size.SI / (self.camera.f_number.SI * physics.lamb(self.band_center.SI))
+        return self.noise_calc.photon_NEP(elem_power, self._freqs, elems=elems, det_pitch=det_pitch, ap_names=ap_names)
 
     def bolo_NEP(self, opt_pow):
         """ Return the bolometric NEP given the detector details """

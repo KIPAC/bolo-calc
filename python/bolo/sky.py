@@ -6,7 +6,7 @@ import numpy as np
 
 import h5py as hp
 
-from cfgmdl import Model, Property, Parameter, cached
+from cfgmdl import Model, Property, cached
 
 from .utils import is_not_none, cfg_path
 from . import physics
@@ -131,9 +131,9 @@ class Foreground(Model):
     """
     Foreground model base class
     """
-    spectral_index = Parameter(required=True, help="Powerlaw index")
-    scale_frequency = Parameter(required=True, help="Frequency", unit="GHz")
-    emiss = Parameter(default=1., help="Emissivity")
+    spectral_index = Variable(required=True, help="Powerlaw index")
+    scale_frequency = Variable(required=True, help="Frequency", unit="GHz")
+    emiss = Variable(default=1., help="Emissivity")
 
 
 class Dust(Foreground):
