@@ -4,7 +4,7 @@ from collections import OrderedDict as odict
 
 import numpy as np
 
-from cfgmdl import Parameter, Model
+from cfgmdl import Model
 from cfgmdl.tools import build_class
 from cfgmdl.utils import is_not_none
 
@@ -57,9 +57,9 @@ class OpticalElement(Model):
     """Model for a single optical element"""
 
     temperature = Variable(required=True)
-    spillover_temp = Parameter(unit="K")
-    scatter_temp = Parameter(unit="K")
-    surface_rough = Parameter()
+    spillover_temp = Variable(unit="K")
+    scatter_temp = Variable(unit="K")
+    surface_rough = Variable()
 
     absorption = Variable(required=True)
     reflection = Variable(required=True)
@@ -117,7 +117,7 @@ class OpticalElement(Model):
 class Mirror(OpticalElement):
     """ OpticalElement sub-class for mirrors """
 
-    conductivity = Parameter()
+    conductivity = Variable()
 
     def calc_abso(self, channel, freqs, nsample):
         """ Compute the absorption for a given channel """
@@ -129,9 +129,9 @@ class Mirror(OpticalElement):
 class Dielectric(OpticalElement):
     """ OpticalElement sub-class for dielectrics """
 
-    thickness = Parameter()
-    index = Parameter()
-    loss_tangent = Parameter()
+    thickness = Variable()
+    index = Variable()
+    loss_tangent = Variable()
 
     def calc_abso(self, channel, freqs, nsample):
         """ Compute the absorption for a given channel """

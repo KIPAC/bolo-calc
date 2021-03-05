@@ -4,7 +4,7 @@ import sys
 
 from collections import OrderedDict as odict
 
-from cfgmdl import Property, Parameter, Model
+from cfgmdl import Property, Model
 from astropy.table import vstack
 
 from .readout import Readout
@@ -20,10 +20,10 @@ from .cfg import Variable
 class Instrument(Model):
     """ Class to represent an instrument """
     site = Property(dtype=str, required=True)
-    sky_temp = Parameter(required=True, unit='K')
-    obs_time = Parameter(required=True, unit='yr')
-    sky_fraction = Parameter(required=True)
-    NET = Parameter(required=True)
+    sky_temp = Variable(required=True, unit='K')
+    obs_time = Variable(required=True, unit='yr')
+    sky_fraction = Variable(required=True)
+    NET = Variable(required=True)
 
     custom_atm_file = Property(dtype=str)
 
