@@ -12,7 +12,7 @@ Setup from bash
 ```
 git clone https://github.com/KIPAC/bolo-calc.git
 cd bolo-calc
-python setup.py install (or python setup.py develop)
+python setup.py develop # this works better than python setup.py install for now b/c the example configuration files live in the package
 ```
 
 Download atmosphere file
