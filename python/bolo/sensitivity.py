@@ -1,6 +1,7 @@
 """ Sensitivity calculation """
 import sys
 import numpy as np
+import pdb
 
 from collections import OrderedDict as odict
 
@@ -64,8 +65,10 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
     map_depth_RJ = Output(unit=Unit('uK-amin'))
 
 
-    summary_fields = ['effic', 'opt_power', 'tel_rj_temp', 'sky_rj_temp', 'NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP_ph_corr', 'NEP', 'NEP_corr',
-                          'NET', 'NET_corr', 'NET_RJ', 'NET_corr_RJ', 'NET_arr', 'NET_arr_RJ',  'NET_arr_RJ', 'map_depth', 'map_depth_RJ']
+    #summary_fields = ['effic', 'opt_power', 'tel_rj_temp', 'sky_rj_temp', 'NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP_ph_corr', 'NEP', 'NEP_corr',
+    #                      'NET', 'NET_corr', 'NET_RJ', 'NET_corr_RJ', 'NET_arr', 'NET_arr_RJ',  'NET_arr_RJ', 'map_depth', 'map_depth_RJ']
+    summary_fields = ['effic', 'opt_power', 'tel_rj_temp', 'sky_rj_temp', 'NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP',
+                          'NET', 'NET_corr','corr_fact', 'NET_arr']
 
     optical_output_fields = ['elem_effic', 'elem_cumul_effic', 'elem_power_from_sky', 'elem_power_to_det']
 
@@ -163,9 +166,11 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
 
         self.NEP_ph_corr.set_from_SI(nep_ph_corr)
 
-        self.NEP_read.set_from_SI(self._channel.read_NEP(self.opt_power.SI))
         if self.NEP_read is None or not np.isfinite(self.NEP_read.SI).all():
             self.NEP_read.set_from_SI(np.sqrt((1 + self._channel.read_frac())**2 - 1.)*np.sqrt(self.NEP_bolo.SI**2 + self.NEP_ph.SI**2))
+        else: 
+            self.NEP_read.set_from_SI(self._channel.read_NEP(self.opt_power.SI))
+
         self.NEP.set_from_SI(np.sqrt(self.NEP_bolo.SI**2 + self.NEP_ph.SI**2 + self.NEP_read.SI**2))
         self.NEP_corr.set_from_SI(np.sqrt(self.NEP_bolo.SI**2 + self.NEP_ph_corr.SI**2 + self.NEP_read.SI**2))
 
