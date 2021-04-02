@@ -1,6 +1,7 @@
 """ Sensitivity calculation """
 import sys
 import numpy as np
+import pdb
 
 from collections import OrderedDict as odict
 
@@ -68,6 +69,7 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
 
     #summary_fields = ['effic', 'opt_power', 'tel_rj_temp', 'sky_rj_temp', 'NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP_ph_corr', 'NEP', 'NEP_corr',
     #                      'NET', 'NET_corr', 'NET_RJ', 'NET_corr_RJ', 'NET_arr', 'NET_arr_RJ',  'NET_arr_RJ', 'map_depth', 'map_depth_RJ']
+
     summary_fields = ['effic', 'opt_power', 'tel_rj_temp', 'sky_rj_temp', 'carrier_index','NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP',
                           'NET', 'NET_corr','corr_fact', 'NET_arr']
 
