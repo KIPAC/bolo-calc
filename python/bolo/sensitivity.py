@@ -31,6 +31,9 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
     """
     effic = Output()
     opt_power = Output(unit=Unit('pW'))
+    P_sat = Output(unit=Unit('pW'))
+    G = Output(unit=Unit('pW/K'))
+    Flink = Output()
 
     tel_power = Output(unit=Unit('pW'))
     sky_power = Output(unit=Unit('pW'))
@@ -67,7 +70,7 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
 
     #summary_fields = ['effic', 'opt_power', 'tel_rj_temp', 'sky_rj_temp', 'NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP_ph_corr', 'NEP', 'NEP_corr',
     #                      'NET', 'NET_corr', 'NET_RJ', 'NET_corr_RJ', 'NET_arr', 'NET_arr_RJ',  'NET_arr_RJ', 'map_depth', 'map_depth_RJ']
-    summary_fields = ['effic', 'opt_power', 'tel_rj_temp', 'sky_rj_temp', 'NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP',
+    summary_fields = ['effic', 'opt_power', 'P_sat', 'Flink', 'G', 'tel_rj_temp', 'sky_rj_temp', 'NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP',
                           'NET', 'NET_corr','corr_fact', 'NET_arr']
 
     optical_output_fields = ['elem_effic', 'elem_cumul_effic', 'elem_power_from_sky', 'elem_power_to_det']
@@ -153,6 +156,12 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
 
         # From this point, all everything is intergrated across bands and given by channel
         self.opt_power.set_from_SI(np.sum(self.elem_power_to_det.SI, axis=0))
+
+        # JR, find Psat
+        self.P_sat.set_from_SI(self._channel.bolo_Psat(self.opt_power.SI))
+        self.G.set_from_SI(self._channel.bolo_G(self.opt_power.SI))
+        self.Flink.set_from_SI(self._channel.bolo_Flink())
+
         self.tel_power.set_from_SI(np.sum(self.elem_power_to_det.SI[NSKY_SRC:], axis=0))
         self.sky_power.set_from_SI(np.sum(self.elem_power_from_sky.SI[:NSKY_SRC], axis=0))
 

@@ -113,6 +113,38 @@ class Channel(Model):  #pylint: disable=too-many-instance-attributes
         det_pitch = self.pixel_size.SI / (self.camera.f_number.SI * physics.lamb(self.band_center.SI))
         return self.noise_calc.photon_NEP(elem_power, self._freqs, elems=elems, det_pitch=det_pitch, ap_names=ap_names)
 
+    # JR
+    def bolo_Psat(self, opt_pow):
+        if is_not_none(self.psat_factor) and np.isfinite(self.psat_factor.SI):
+            p_sat = opt_pow * self.psat_factor.SI
+        else:
+            p_sat = self.psat.SI
+        return(p_sat)
+
+    def bolo_G(self, opt_pow):
+        tb = self._camera.bath_temperature()
+        tc = self.Tc.SI
+        n = self.carrier_index.SI  
+        if is_not_none(self.G) and np.isfinite(self.G.SI).all():
+            g = self.G.SI
+        else:
+            if is_not_none(self.psat_factor) and np.isfinite(self.psat_factor.SI):
+                p_sat = opt_pow * self.psat_factor.SI
+            else:
+                p_sat = self.psat.SI
+            g = noise.G(p_sat, n, tb, tc)
+        return(g)
+
+    def bolo_Flink(self):
+        tb = self._camera.bath_temperature()
+        tc = self.Tc.SI
+        n = self.carrier_index.SI
+        if is_not_none(self.Flink) and np.isfinite(self.Flink.SI):
+            flink = self.Flink.SI
+        else:
+            flink = noise.Flink(n, tb, tc)
+        return(flink)
+
     def bolo_NEP(self, opt_pow):
         """ Return the bolometric NEP given the detector details """
         tb = self._camera.bath_temperature()
