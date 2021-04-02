@@ -117,7 +117,7 @@ class Channel(Model):  #pylint: disable=too-many-instance-attributes
         """ Return the bolometric NEP given the detector details """
         tb = self._camera.bath_temperature()
         tc = self.Tc.SI
-        n = 1. #self.n
+        n = self.carrier_index.SI  #1. #self.n
         if is_not_none(self.G) and np.isfinite(self.G.SI).all():
             g = self.G.SI
         else:
