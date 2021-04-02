@@ -1,7 +1,6 @@
 """ Sensitivity calculation """
 import sys
 import numpy as np
-import pdb
 
 from collections import OrderedDict as odict
 
@@ -38,6 +37,8 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
     tel_rj_temp = Output(unit=Unit('K'))
     sky_rj_temp = Output(unit=Unit('K'))
 
+    carrier_index = Output()   #JR, not working yet.
+
     elem_effic = Output()
     elem_cumul_effic = Output()
     elem_power_from_sky = Output(unit=Unit('pW'))
@@ -67,7 +68,7 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
 
     #summary_fields = ['effic', 'opt_power', 'tel_rj_temp', 'sky_rj_temp', 'NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP_ph_corr', 'NEP', 'NEP_corr',
     #                      'NET', 'NET_corr', 'NET_RJ', 'NET_corr_RJ', 'NET_arr', 'NET_arr_RJ',  'NET_arr_RJ', 'map_depth', 'map_depth_RJ']
-    summary_fields = ['effic', 'opt_power', 'tel_rj_temp', 'sky_rj_temp', 'NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP',
+    summary_fields = ['effic', 'opt_power', 'tel_rj_temp', 'sky_rj_temp', 'carrier_index','NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP',
                           'NET', 'NET_corr','corr_fact', 'NET_arr']
 
     optical_output_fields = ['elem_effic', 'elem_cumul_effic', 'elem_power_from_sky', 'elem_power_to_det']
