@@ -157,11 +157,6 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
         # From this point, all everything is intergrated across bands and given by channel
         self.opt_power.set_from_SI(np.sum(self.elem_power_to_det.SI, axis=0))
 
-        # JR, find Psat
-        self.P_sat.set_from_SI(self._channel.bolo_Psat(self.opt_power.SI))
-        self.G.set_from_SI(self._channel.bolo_G(self.opt_power.SI))
-        self.Flink.set_from_SI(self._channel.bolo_Flink())
-
         self.tel_power.set_from_SI(np.sum(self.elem_power_to_det.SI[NSKY_SRC:], axis=0))
         self.sky_power.set_from_SI(np.sum(self.elem_power_from_sky.SI[:NSKY_SRC], axis=0))
 
@@ -196,6 +191,14 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
         self.corr_fact.set_from_SI(self.NET_corr.SI / self.NET.SI)
         self.map_depth.set_from_SI(noise.map_depth(self.NET_arr.SI, self._fsky, self._obs_time, self._obs_effic))
         self.map_depth_RJ.set_from_SI(noise.map_depth(self.NET_arr_RJ.SI, self._fsky, self._obs_time, self._obs_effic))
+
+        # JR, find Psat
+        to_shape = np.ones((self.corr_fact.value.shape))
+        self.P_sat.set_from_SI(self._channel.bolo_Psat(self.opt_power.SI) * to_shape)
+        self.G.set_from_SI(self._channel.bolo_G(self.opt_power.SI) * to_shape)
+        self.Flink.set_from_SI(self._channel.bolo_Flink() * to_shape)
+
+
         self.summarize()
         self.analyze_optical_chain()
 
