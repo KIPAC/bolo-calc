@@ -31,6 +31,9 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
     """
     effic = Output()
     opt_power = Output(unit=Unit('pW'))
+    P_sat = Output(unit=Unit('pW'))
+    G = Output(unit=Unit('pW/K'))
+    Flink = Output()
 
     tel_power = Output(unit=Unit('pW'))
     sky_power = Output(unit=Unit('pW'))
@@ -67,7 +70,7 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
 
     #summary_fields = ['effic', 'opt_power', 'tel_rj_temp', 'sky_rj_temp', 'NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP_ph_corr', 'NEP', 'NEP_corr',
     #                      'NET', 'NET_corr', 'NET_RJ', 'NET_corr_RJ', 'NET_arr', 'NET_arr_RJ',  'NET_arr_RJ', 'map_depth', 'map_depth_RJ']
-    summary_fields = ['effic', 'opt_power', 'tel_rj_temp', 'sky_rj_temp', 'NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP',
+    summary_fields = ['effic', 'opt_power', 'P_sat', 'Flink', 'G', 'tel_rj_temp', 'sky_rj_temp', 'NEP_bolo', 'NEP_read', 'NEP_ph', 'NEP',
                           'NET', 'NET_corr','corr_fact', 'NET_arr']
 
     optical_output_fields = ['elem_effic', 'elem_cumul_effic', 'elem_power_from_sky', 'elem_power_to_det']
@@ -153,6 +156,7 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
 
         # From this point, all everything is intergrated across bands and given by channel
         self.opt_power.set_from_SI(np.sum(self.elem_power_to_det.SI, axis=0))
+
         self.tel_power.set_from_SI(np.sum(self.elem_power_to_det.SI[NSKY_SRC:], axis=0))
         self.sky_power.set_from_SI(np.sum(self.elem_power_from_sky.SI[:NSKY_SRC], axis=0))
 
@@ -168,7 +172,7 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
 
         if self.NEP_read is None or not np.isfinite(self.NEP_read.SI).all():
             self.NEP_read.set_from_SI(np.sqrt((1 + self._channel.read_frac())**2 - 1.)*np.sqrt(self.NEP_bolo.SI**2 + self.NEP_ph.SI**2))
-        else: 
+        else:
             self.NEP_read.set_from_SI(self._channel.read_NEP(self.opt_power.SI))
 
         self.NEP.set_from_SI(np.sqrt(self.NEP_bolo.SI**2 + self.NEP_ph.SI**2 + self.NEP_read.SI**2))
@@ -187,6 +191,13 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
         self.corr_fact.set_from_SI(self.NET_corr.SI / self.NET.SI)
         self.map_depth.set_from_SI(noise.map_depth(self.NET_arr.SI, self._fsky, self._obs_time, self._obs_effic))
         self.map_depth_RJ.set_from_SI(noise.map_depth(self.NET_arr_RJ.SI, self._fsky, self._obs_time, self._obs_effic))
+
+        # JR, find Psat
+        to_shape = np.ones((self.NET_corr.SI.shape))
+        self.P_sat.set_from_SI(self._channel.bolo_Psat(self.opt_power.SI) * to_shape)
+        self.G.set_from_SI(self._channel.bolo_G(self.opt_power.SI) * to_shape)
+        self.Flink.set_from_SI(self._channel.bolo_Flink() * to_shape)
+
         self.summarize()
         self.analyze_optical_chain()
 
