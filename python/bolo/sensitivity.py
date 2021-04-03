@@ -172,7 +172,7 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
 
         if self.NEP_read is None or not np.isfinite(self.NEP_read.SI).all():
             self.NEP_read.set_from_SI(np.sqrt((1 + self._channel.read_frac())**2 - 1.)*np.sqrt(self.NEP_bolo.SI**2 + self.NEP_ph.SI**2))
-        else: 
+        else:
             self.NEP_read.set_from_SI(self._channel.read_NEP(self.opt_power.SI))
 
         self.NEP.set_from_SI(np.sqrt(self.NEP_bolo.SI**2 + self.NEP_ph.SI**2 + self.NEP_read.SI**2))
@@ -193,11 +193,10 @@ class Sensitivity(Model): #pylint: disable=too-many-instance-attributes
         self.map_depth_RJ.set_from_SI(noise.map_depth(self.NET_arr_RJ.SI, self._fsky, self._obs_time, self._obs_effic))
 
         # JR, find Psat
-        to_shape = np.ones((self.corr_fact.value.shape))
+        to_shape = np.ones((self.NET_corr.SI.shape))
         self.P_sat.set_from_SI(self._channel.bolo_Psat(self.opt_power.SI) * to_shape)
         self.G.set_from_SI(self._channel.bolo_G(self.opt_power.SI) * to_shape)
         self.Flink.set_from_SI(self._channel.bolo_Flink() * to_shape)
-
 
         self.summarize()
         self.analyze_optical_chain()
