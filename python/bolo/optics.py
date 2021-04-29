@@ -3,6 +3,7 @@
 from collections import OrderedDict as odict
 
 import numpy as np
+#import pdb
 
 from cfgmdl import Model
 from cfgmdl.tools import build_class
@@ -87,7 +88,7 @@ class OpticalElement(Model):
         results_.refl = self.reflection.sample(nsample, freqs, chan_idx)
         results_.spil = self.spillover.sample(nsample, freqs, chan_idx)
         if is_not_none(self.surface_rough) and np.isfinite(self.surface_rough.SI).all():
-            results_.scat = 1. - physics.ruze_eff(freqs, self.surface_rough)
+            results_.scat = 1. - physics.ruze_eff(freqs, self.surface_rough.SI)
         else:
             results_.scat = self.scatter_frac.sample(nsample, freqs, chan_idx)
         if is_not_none(self.spillover_temp) and np.isfinite(self.spillover_temp.SI).all():
