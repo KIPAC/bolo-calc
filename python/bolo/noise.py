@@ -58,6 +58,7 @@ def calc_photon_NEP(popts, freqs, factors=None):
                         for j in range(len(popts))])
     nep = np.sqrt(np.trapz((2. * physics.h * freqs * popt + 2. * popt2), freqs))
     neparr = np.sqrt(np.trapz((2. * physics.h * freqs * popt + 2. * popt2arr), freqs))
+
     return nep, neparr
 
 def bolo_NEP(flink, G_val, Tc):
@@ -168,7 +169,7 @@ class Noise: #pylint: disable=too-many-instance-attributes
         # Detector pitch array
         self._det_p = self._p_c_apert
         # Geometric pitch factor
-        self._geo_fact = 6  # Hex packing
+        self._geo_fact = 6  # Hex packing;  6 for temperature.  More complicated for polarization, not a simple factor.
 
     def corr_facts(self, elems, det_pitch, ap_names, flamb_max=3.):
         """
@@ -182,8 +183,6 @@ class Noise: #pylint: disable=too-many-instance-attributes
         Default is 3.
         """
         ndets = int(round(flamb_max / (det_pitch), 0))
-        #import pdb
-        #pdb.set_trace()
         inds1 = [np.argmin(abs(np.array(self._det_p) -
                  det_pitch * (n + 1)))
                  for n in range(ndets)]
@@ -197,13 +196,15 @@ class Noise: #pylint: disable=too-many-instance-attributes
             if at_det:
                 factors.append(1.)
                 continue
-            if "CMB" in elem_:
+            if "CMB" in elem_.upper():
                 use_abs = abs(self._c_apert)
             elif elem_ in ap_names:
-                use_abs = abs(self._i_stop)
+                #use_abs = abs(self._i_stop)    # Original BoloCalc uses c_apert and c_stop in place of i_apert and i_stop
+                use_abs = abs(self._c_stop)
                 at_det = True
             else:
-                use_abs = abs(self._i_apert)
+                #use_abs = abs(self._i_apert)
+                use_abs = abs(self._c_apert)
             factors.append(np.sqrt(1. + self._geo_fact*(np.sum([use_abs[ind] for ind in inds]))))
 
         return np.array(factors)
