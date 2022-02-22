@@ -14,7 +14,7 @@ class SimConfig(Model):
     save_sim = Property(dtype=bool, default=True)
     save_optical = Property(dtype=bool, default=True)
     freq_resol = Property(dtype=float, default=None)
-    config_dir = Property(dtype=str, default="../config")
+    config_dir = Property(dtype=str, default=os.path.join(os.path.pardir, "config"))
 
     def __init__(self, **kwargs):
         """ Constructor """
