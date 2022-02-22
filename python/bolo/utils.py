@@ -163,7 +163,7 @@ def read_txt_to_np(fname):
         delim = ','
     else:
         raise ValueError("File %s is not csv or txt")
-    return np.loadtxt(fname, unpack=True, dtype=np.float, delimiter=delim)
+    return np.loadtxt(os.path.normpath(fname), unpack=True, dtype=np.float, delimiter=delim)
 
 
 def reshape_array(val, shape):

@@ -90,7 +90,7 @@ class Instrument(Model):
     def write_tables(self, filename):
         """ Write output fits tables """
         if self._tables:
-            self._tables.save_datatables(filename)
+            self._tables.save_datatables(filename, overwrite=True)
 
     @property
     def tables(self):
