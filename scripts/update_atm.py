@@ -31,7 +31,7 @@ def reporthook(count, block_size, total_size):
 def main():
     # Download atmosphere files
     fname = "atm_20201217.hdf5"
-    top_dir = os.path.abspath(os.path.dirname(__file__)).replace('/scripts', '')
+    top_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
     atm_file = os.path.join(top_dir, "scripts", fname)
     new_atm_file = os.path.join(top_dir, "config", fname)
 
@@ -40,12 +40,12 @@ def main():
     if os.path.exists(atm_file):
         sys.stdout.write("\nSuccessfully downloaded atmosphere file %s." % (fname))
         sys.stdout.write(
-            ("\nADVICE: delete any old atm files (~1 GB each) from BoloCalc" + 
+            ("\nADVICE: delete any old atm files (~1 GB each) from BoloCalc" +
             os.sep + "src" + os.sep + "\n\n"))
         os.rename(atm_file, new_atm_file)
     else:
         sys.stdout.write("\nERROR: problem downloading atmosphere file %s\n\n" % (fname))
 
-        
+
 if __name__ == '__main__':
     main()
