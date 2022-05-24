@@ -32,7 +32,7 @@ class CfgDir:
 
     def cfg_path(self, val):
         """ Build a path using the top-level configuration directory """
-        return os.path.join(self.config_dir, val)
+        return os.path.normpath(os.path.join(self.config_dir, val))
 
 CFG_DIR = CfgDir()
 
