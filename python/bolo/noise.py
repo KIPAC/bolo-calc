@@ -153,17 +153,17 @@ class Noise: #pylint: disable=too-many-instance-attributes
         # Correlation files
         corr_dir = os.path.join(
             os.path.split(__file__)[0], "PKL")
-        self._p_c_apert, self._c_apert = pk.load(io.open(
-            os.path.join(corr_dir, "coherentApertCorr.pkl"), "rb"),
+        self._p_c_apert, self._c_apert = pk.load(io.open(os.path.normpath(
+            os.path.join(corr_dir, "coherentApertCorr.pkl")), "rb"),
                             encoding="latin1")
-        self._p_c_stop,  self._c_stop = pk.load(io.open(
-            os.path.join(corr_dir, "coherentStopCorr.pkl"), "rb"),
+        self._p_c_stop,  self._c_stop = pk.load(io.open(os.path.normpath(
+            os.path.join(corr_dir, "coherentStopCorr.pkl")), "rb"),
                             encoding="latin1")
-        self._p_i_apert, self._i_apert = pk.load(io.open(
-            os.path.join(corr_dir, "incoherentApertCorr.pkl"), "rb"),
+        self._p_i_apert, self._i_apert = pk.load(io.open(os.path.normpath(
+            os.path.join(corr_dir, "incoherentApertCorr.pkl")), "rb"),
                             encoding="latin1")
-        self._p_i_stop,  self._i_stop = pk.load(io.open(
-            os.path.join(corr_dir, "incoherentStopCorr.pkl"), "rb"),
+        self._p_i_stop,  self._i_stop = pk.load(io.open(os.path.normpath(
+            os.path.join(corr_dir, "incoherentStopCorr.pkl")), "rb"),
                             encoding="latin1")
 
         # Detector pitch array

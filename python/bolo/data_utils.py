@@ -170,7 +170,7 @@ class TableDict:
         extype = os.path.splitext(filepath)[1]
         if extype in HDF5_SUFFIXS:
             for key, val in self._table_dict.items():
-                val.write(filepath, path=key, **kwargs)
+                val.write(filepath, path=key, overwrite=True, **kwargs)
         elif extype in FITS_SUFFIXS:
             if self._primary is None:
                 hlist = [fits.PrimaryHDU()]

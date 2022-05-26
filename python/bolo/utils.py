@@ -32,7 +32,7 @@ class CfgDir:
 
     def cfg_path(self, val):
         """ Build a path using the top-level configuration directory """
-        return os.path.join(self.config_dir, val)
+        return os.path.normpath(os.path.join(self.config_dir, val))
 
 CFG_DIR = CfgDir()
 
@@ -163,7 +163,7 @@ def read_txt_to_np(fname):
         delim = ','
     else:
         raise ValueError("File %s is not csv or txt")
-    return np.loadtxt(fname, unpack=True, dtype=np.float, delimiter=delim)
+    return np.loadtxt(os.path.normpath(fname), unpack=True, dtype=np.float, delimiter=delim)
 
 
 def reshape_array(val, shape):
